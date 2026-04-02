@@ -118,8 +118,13 @@ export default function Layout() {
             </h2>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-8">
-          <Outlet />
+        <div className="flex-1 overflow-y-auto p-8 flex flex-col">
+          <div className="flex-1">
+            <Outlet />
+          </div>
+          <footer className="mt-12 text-center text-sm font-bold text-slate-400">
+            &copy; {new Date().getFullYear()} AUCTION47
+          </footer>
         </div>
       </main>
 
