@@ -5,7 +5,6 @@ import { api } from '../lib/api';
 import { User, Upload, CheckCircle, AlertCircle, Users, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { PlayerStatus, Player } from '../types';
-import { Link } from 'react-router-dom';
 
 export default function PlayerRegistration() {
   const store = useAuctionStore();
