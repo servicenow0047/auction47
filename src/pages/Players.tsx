@@ -2,12 +2,14 @@ import { useState, useMemo, useEffect } from 'react';
 import { useAuctionStore } from '../store/useAuctionStore';
 import {
   Search, CheckCircle, XCircle, UserX, UserCheck,
-  Clock, UserPlus, Eye, Filter, Trash2, ShieldAlert, Users
+  Clock, UserPlus, Eye, Filter, Trash2, ShieldAlert, Users, Download, Loader2
 } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 import type { Player } from '../types';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import { pdf } from '@react-pdf/renderer';
+import { ApprovedPlayersPDFDocument } from '../components/PlayerListPDFView';
 
 type TabType = 'pending' | 'not_called' | 'rejected';
 
@@ -91,6 +93,7 @@ export default function Players() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [schema, setSchema] = useState<any>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const [actionModal, setActionModal] = useState<ActionModal>({
     isOpen: false, type: null, player: null,
@@ -102,6 +105,58 @@ export default function Players() {
   useEffect(() => {
     api.getRegistrationSchema().then(setSchema).catch(console.error);
   }, []);
+
+  const handleDownloadApprovedPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const approvedPlayers = store.players.filter(p => p.status === 'not_called');
+
+      // Pre-process all images to safe base64 JPEGs using browser Image/Canvas
+      const safePlayers = await Promise.all(
+        approvedPlayers.map(async (player) => {
+          if (!player.photo) return player;
+          const safePhoto = await new Promise<string>((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width || 200;
+              canvas.height = img.height || 200;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg', 0.9));
+              } else {
+                resolve('');
+              }
+            };
+            img.onerror = () => resolve('');
+            img.src = player.photo;
+          });
+          return { ...player, photo: safePhoto };
+        })
+      );
+
+      const blob = await pdf(
+        <ApprovedPlayersPDFDocument players={safePlayers} />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Approved_Players_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   // --- Counts ---
   const pendingCount  = store.players.filter(p => p.status === 'pending').length;
@@ -222,6 +277,19 @@ export default function Players() {
                 {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r === 'All' ? 'All Roles' : r}</option>)}
               </select>
             </div>
+            {activeTab === 'not_called' && (
+              <button
+                onClick={handleDownloadApprovedPdf}
+                disabled={isGeneratingPdf || approvedCount === 0}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all"
+              >
+                {isGeneratingPdf ? (
+                  <><Loader2 size={15} className="animate-spin" /> Generating...</>
+                ) : (
+                  <><Download size={15} /> Download PDF</>
+                )}
+              </button>
+            )}
             <Link
               to="/register"
               className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all"
