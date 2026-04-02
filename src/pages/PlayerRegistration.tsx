@@ -177,7 +177,7 @@ export default function PlayerRegistration() {
       <div className="max-w-5xl mx-auto pb-12 animate-in fade-in">
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">{schema.sportName} Player Registration</h1>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Player Registration</h1>
           <p className="text-slate-500 mt-2 font-medium">Register for the upcoming auction.</p>
         </div>
         <div className="flex items-center gap-4">
@@ -185,9 +185,6 @@ export default function PlayerRegistration() {
             <Users size={20} className="text-emerald-500" />
             <span>{registeredCount} Registered</span>
           </div>
-          <Link to="/players" className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-md">
-            View Players
-          </Link>
         </div>
       </div>
 
