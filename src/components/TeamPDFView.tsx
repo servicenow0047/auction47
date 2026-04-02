@@ -5,7 +5,6 @@ import {
   Text,
   Image,
   StyleSheet,
-  Font,
 } from '@react-pdf/renderer';
 import type { Team, Player } from '../types';
 
@@ -307,7 +306,7 @@ export function SquadPDFDocument({ team, players }: Props) {
         ) : (
           <View style={s.grid}>
             {players.map((player) => {
-              const roleClr = ROLE_COLORS[player.role] ?? '#64748b';
+              const roleClr = player.role ? ROLE_COLORS[player.role] ?? '#64748b' : '#64748b';
               return (
                 <View key={player.id} style={s.card}>
                   {/* Photo */}
@@ -333,7 +332,7 @@ export function SquadPDFDocument({ team, players }: Props) {
 
                   {/* Body */}
                   <View style={s.cardBody}>
-                    <Text style={s.playerName} numberOfLines={1}>
+                    <Text style={s.playerName}>
                       {player.name}
                     </Text>
 
