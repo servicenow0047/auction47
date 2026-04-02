@@ -136,7 +136,7 @@ export default function FormBuilder() {
   };
 
   const handleCopyLink = () => {
-    const url = window.location.origin + '/register';
+    const url = window.location.origin + '/#/register';
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
