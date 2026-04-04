@@ -391,7 +391,7 @@ function PlayerCard({ player, globalIdx, schemaFields }: CardProps) {
       <View style={s.cardHeader}>
         {/* Name + role text */}
         <View style={s.headerMain}>
-          <Text style={s.playerName} numberOfLines={1}>
+          <Text style={s.playerName}>
             {player.name}
           </Text>
           {player.role && (
@@ -438,7 +438,7 @@ function PlayerCard({ player, globalIdx, schemaFields }: CardProps) {
             <View key={field.id} style={s.dataRow}>
               <Text style={s.dataLabel}>{field.label}</Text>
               <Text style={s.dataColon}>:</Text>
-              <Text style={s.dataValue} numberOfLines={1}>
+              <Text style={s.dataValue}>
                 {String(player[field.id]).substring(0, 24)}
               </Text>
             </View>
