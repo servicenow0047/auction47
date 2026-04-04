@@ -3,10 +3,12 @@ import { useAuctionStore } from '../store/useAuctionStore';
 import { Save, Plus, Trash2, AlertTriangle, StopCircle, PlayCircle } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/Toast';
 
 export default function Settings() {
   const store = useAuctionStore();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [settings, setSettings] = useState(store.settings);
   const [showEndModal, setShowEndModal] = useState(false);
 
@@ -18,7 +20,7 @@ export default function Settings() {
 
   const handleSave = () => {
     store.updateSettings(settings);
-    alert('Settings saved successfully!');
+    toast('success', 'Settings Saved', 'Auction rules have been updated successfully.');
   };
 
   const updateIncrement = (index: number, field: string, value: number) => {

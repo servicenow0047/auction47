@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useAuctionStore } from '../store/useAuctionStore';
 import {
   Search, CheckCircle, XCircle, UserX, UserCheck,
-  Clock, UserPlus, Eye, Filter, Trash2, ShieldAlert, Users, Download, Loader2
+  Clock, Eye, Filter, Trash2, ShieldAlert, Users, Download, Loader2, CheckCheck
 } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 import type { Player } from '../types';
@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { pdf } from '@react-pdf/renderer';
 import { ApprovedPlayersPDFDocument } from '../components/PlayerListPDFView';
+import { useToast } from '../components/Toast';
 
 type TabType = 'pending' | 'not_called' | 'rejected';
 
@@ -88,12 +89,14 @@ const STATUS_DOT: Record<string, string> = {
 
 export default function Players() {
   const store = useAuctionStore();
+  const { toast, confirm } = useToast();
 
   const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [schema, setSchema] = useState<any>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isApprovingAll, setIsApprovingAll] = useState(false);
 
   const [actionModal, setActionModal] = useState<ActionModal>({
     isOpen: false, type: null, player: null,
@@ -105,6 +108,29 @@ export default function Players() {
   useEffect(() => {
     api.getRegistrationSchema().then(setSchema).catch(console.error);
   }, []);
+
+  const handleApproveAll = async () => {
+    const pending = store.players.filter(p => p.status === 'pending');
+    if (pending.length === 0) return;
+    const ok = await confirm({
+      title: 'Approve All Pending Players',
+      message: `This will approve all ${pending.length} pending player(s) and add them to the auction pool. Are you sure?`,
+      confirmText: `Approve All (${pending.length})`,
+      variant: 'primary',
+    });
+    if (!ok) return;
+    setIsApprovingAll(true);
+    try {
+      for (const player of pending) {
+        await store.updatePlayerStatus(player.id, 'not_called');
+      }
+      toast('success', 'All Players Approved', `${pending.length} player(s) have been added to the auction pool.`);
+    } catch {
+      toast('error', 'Approval Failed', 'Some players could not be approved. Please try again.');
+    } finally {
+      setIsApprovingAll(false);
+    }
+  };
 
   const handleDownloadApprovedPdf = async () => {
     try {
@@ -140,7 +166,7 @@ export default function Players() {
       );
 
       const blob = await pdf(
-        <ApprovedPlayersPDFDocument players={safePlayers} />
+        <ApprovedPlayersPDFDocument players={safePlayers} schema={schema} />
       ).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -152,7 +178,7 @@ export default function Players() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+      toast('error', 'PDF Failed', error instanceof Error ? error.message : 'An unexpected error occurred.');
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -277,6 +303,19 @@ export default function Players() {
                 {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r === 'All' ? 'All Roles' : r}</option>)}
               </select>
             </div>
+            {activeTab === 'pending' && (
+              <button
+                onClick={handleApproveAll}
+                disabled={isApprovingAll || pendingCount === 0}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all"
+              >
+                {isApprovingAll ? (
+                  <><Loader2 size={15} className="animate-spin" /> Approving...</>
+                ) : (
+                  <><CheckCheck size={15} /> Approve All ({pendingCount})</>
+                )}
+              </button>
+            )}
             {activeTab === 'not_called' && (
               <button
                 onClick={handleDownloadApprovedPdf}
@@ -290,12 +329,6 @@ export default function Players() {
                 )}
               </button>
             )}
-            <Link
-              to="/register"
-              className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all"
-            >
-              <UserPlus size={15} /> Register Player
-            </Link>
           </div>
         </div>
 
@@ -336,24 +369,39 @@ export default function Players() {
                       </div>
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">{player.role}</p>
 
-                      <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                        <div className="bg-slate-50 rounded-lg p-2 text-center">
-                          <p className="text-slate-400 font-medium">Age</p>
-                          <p className="font-black text-slate-800">{player.age}</p>
-                        </div>
-                        <div className="bg-slate-50 rounded-lg p-2 text-center">
-                          <p className="text-slate-400 font-medium">Base</p>
-                          <p className="font-black text-purple-700 text-[11px]">{formatCurrency(player.basePrice)}</p>
-                        </div>
-                        <div className="bg-slate-50 rounded-lg p-2 text-center overflow-hidden">
-                          <p className="text-slate-400 font-medium">Exp</p>
-                          <p className="font-black text-slate-800 truncate text-[10px]">{player.experience ?? '—'}</p>
-                        </div>
+                      {/* Base price highlight */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 font-medium">Base Price:</span>
+                        <span className="text-[11px] font-black text-purple-700">{formatCurrency(player.basePrice)}</span>
                       </div>
 
-                      {player.phone && (
-                        <p className="mt-2 text-xs text-slate-500 font-medium">📞 {player.phone}</p>
-                      )}
+                      {/* Dynamic schema fields */}
+                      {schema?.fields && (() => {
+                        const displayFields = schema.fields.filter((f: any) =>
+                          f.type !== 'file' &&
+                          f.id !== 'name' &&
+                          f.id !== 'photo' &&
+                          player[f.id] !== undefined &&
+                          player[f.id] !== '' &&
+                          player[f.id] !== null
+                        );
+                        if (displayFields.length === 0) return null;
+                        return (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {displayFields.slice(0, 5).map((field: any) => (
+                              <span
+                                key={field.id}
+                                className="inline-flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5 text-[10px]"
+                              >
+                                <span className="text-slate-400 font-medium">{field.label}:</span>
+                                <span className="font-bold text-slate-700 max-w-[80px] truncate">
+                                  {String(player[field.id])}
+                                </span>
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 

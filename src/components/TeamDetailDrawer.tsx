@@ -4,6 +4,7 @@ import { pdf } from '@react-pdf/renderer';
 import type { Team, Player } from '../types';
 import { formatCurrency } from '../lib/utils';
 import { SquadPDFDocument } from './TeamPDFView';
+import { useToast } from './Toast';
 
 interface TeamDetailDrawerProps {
   team: Team | null;
@@ -14,6 +15,7 @@ interface TeamDetailDrawerProps {
 
 export default function TeamDetailDrawer({ team, players, initialBudget, onClose }: TeamDetailDrawerProps) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const { toast } = useToast();
 
   if (!team) return null;
 
@@ -74,7 +76,7 @@ export default function TeamDetailDrawer({ team, players, initialBudget, onClose
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+      toast('error', 'PDF Failed', error instanceof Error ? error.message : 'An unexpected error occurred.');
     } finally {
       setIsGeneratingPdf(false);
     }

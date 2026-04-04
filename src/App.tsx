@@ -11,6 +11,7 @@ import UnsoldPlayers from './pages/UnsoldPlayers';
 import AuctionLog from './pages/AuctionLog';
 import PlayerRegistration from './pages/PlayerRegistration';
 import Login from './pages/Login';
+import { ToastProvider } from './components/Toast';
 
 import { useEffect } from 'react';
 import { useAuctionStore } from './store/useAuctionStore';
@@ -31,29 +32,31 @@ function App() {
   }, [loadState]);
 
   return (
-    <HashRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        
-        {/* Protected Admin Routes */}
-        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-          <Route index element={<Home />} />
-          <Route path="teams" element={<Teams />} />
-          <Route path="players" element={<Players />} />
-          <Route path="auction" element={<LiveAuction />} />
-          <Route path="unsold" element={<UnsoldPlayers />} />
-          <Route path="log" element={<AuctionLog />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="form-builder" element={<FormBuilder />} />
-        </Route>
-        
-        {/* Public Routes */}
-        <Route path="/register" element={<PlayerRegistration />} />
-        <Route path="/display" element={<LiveDisplay />} />
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </HashRouter>
+    <ToastProvider>
+      <HashRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
+          {/* Protected Admin Routes */}
+          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route index element={<Home />} />
+            <Route path="teams" element={<Teams />} />
+            <Route path="players" element={<Players />} />
+            <Route path="auction" element={<LiveAuction />} />
+            <Route path="unsold" element={<UnsoldPlayers />} />
+            <Route path="log" element={<AuctionLog />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="form-builder" element={<FormBuilder />} />
+          </Route>
+          
+          {/* Public Routes */}
+          <Route path="/register" element={<PlayerRegistration />} />
+          <Route path="/display" element={<LiveDisplay />} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </HashRouter>
+    </ToastProvider>
   );
 }
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { Save, Plus, Trash2, GripVertical, FileImage, Type, AlignLeft, Hash, CheckSquare, Mail, Phone, List as ListIcon, Loader2, AlertTriangle, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/Toast';
 
 export interface FormField {
   id: string;
@@ -96,6 +97,7 @@ export default function FormBuilder() {
   const [copied, setCopied] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { toast, confirm } = useToast();
 
   useEffect(() => {
     loadSchema();
@@ -124,12 +126,11 @@ export default function FormBuilder() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // update order based on array position before saving
       const updatedFields = schema.fields.map((f, i) => ({ ...f, order: i + 1 }));
       await api.updateRegistrationSchema({ sportName: schema.sportName, fields: updatedFields });
-      alert('Form Schema saved successfully! The registration page is now updated.');
+      toast('success', 'Form Published', 'Registration form has been updated successfully.');
     } catch (err) {
-      alert('Failed to save schema');
+      toast('error', 'Save Failed', 'Could not save the form schema. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -140,14 +141,21 @@ export default function FormBuilder() {
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    }).catch(err => {
-      console.error('Failed to copy', err);
-      alert('Failed to copy the link. URL is: ' + url);
+      toast('success', 'Link Copied', 'Registration link has been copied to clipboard.');
+    }).catch(() => {
+      toast('error', 'Copy Failed', `Share this URL manually: ${url}`);
     });
   };
 
-  const loadTemplate = (sport: string) => {
-    if (window.confirm(`Are you sure you want to load the ${sport} template? This will replace your current fields.`)) {
+  const loadTemplate = async (sport: string) => {
+    const ok = await confirm({
+      title: `Load ${sport} Template`,
+      message: `This will replace your current form fields with the ${sport} template. This cannot be undone.`,
+      confirmText: 'Yes, Load Template',
+      cancelText: 'Keep Current',
+      variant: 'warning',
+    });
+    if (ok) {
       setSchema({ sportName: sport, fields: JSON.parse(JSON.stringify(templates[sport])) });
       setSelectedFieldId(templates[sport][0].id);
     }
@@ -166,7 +174,7 @@ export default function FormBuilder() {
   const removeField = (id: string) => {
     const field = schema.fields.find(f => f.id === id);
     if (field?.builtIn) {
-      alert('Cannot delete built-in fields. You can just make them not required.');
+      toast('warning', 'Cannot Delete Built-in Field', 'You can make it optional instead.');
       return;
     }
     setSchema(prev => ({
