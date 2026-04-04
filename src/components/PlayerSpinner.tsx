@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { Player } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { RefreshCw, Shuffle, Trophy, Users } from 'lucide-react';
+import { api } from '../lib/api';
 
 interface PlayerSpinnerProps {
   availablePlayers: Player[];
@@ -31,6 +32,11 @@ export default function PlayerSpinner({
   const [displayIndex, setDisplayIndex] = useState(0);
   const [phase, setPhase] = useState<'idle' | 'spinning' | 'revealing'>('idle');
   const [winner, setWinner] = useState<Player | null>(null);
+  const [schema, setSchema] = useState<any>(null);
+
+  useEffect(() => {
+    api.getRegistrationSchema().then(setSchema).catch(console.error);
+  }, []);
 
   // useRef so we can safely clear it from inside the closure
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -196,13 +202,24 @@ export default function PlayerSpinner({
         {/* Player meta */}
         <div
           className={cn(
-            'flex gap-3 mt-2 text-sm font-medium z-10 transition-opacity',
+            'flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2 text-sm font-medium z-10 transition-opacity px-2',
             isSpinning ? 'opacity-0' : 'opacity-100 text-slate-500'
           )}
         >
-          <span>Age {displayPlayer.age}</span>
-          <span>·</span>
-          <span>Base {formatCurrency(displayPlayer.basePrice)}</span>
+          {schema?.fields?.filter((f: any) => f.type !== 'file' && f.id !== 'name' && f.id !== 'photo' && f.id !== 'basePrice').slice(0, 3).map((field: any) => {
+            const val = (displayPlayer as any)[field.id];
+            if (val === undefined || val === null || val === '') return null;
+            return (
+              <span key={field.id} className="flex items-center gap-1 whitespace-nowrap">
+                <span className="opacity-70">{field.label}:</span>
+                <span className="text-slate-700">{String(val)}</span>
+              </span>
+            );
+          })}
+          <span className="flex items-center gap-1 whitespace-nowrap">
+            <span className="opacity-70">Base:</span>
+            <span className="font-bold text-purple-700">{formatCurrency(displayPlayer.basePrice)}</span>
+          </span>
         </div>
 
         {/* Revealing banner */}

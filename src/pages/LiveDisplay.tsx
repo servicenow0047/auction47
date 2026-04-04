@@ -1,11 +1,17 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useAuctionStore } from '../store/useAuctionStore';
+import { api } from '../lib/api';
 import { calculateMaxAllowedBid } from '../utils/auctionLogic';
 import { formatCurrency, cn } from '../lib/utils';
 import { MonitorPlay } from 'lucide-react';
 
 export default function LiveDisplay() {
   const store = useAuctionStore();
+  const [schema, setSchema] = useState<any>(null);
+
+  useEffect(() => {
+    api.getRegistrationSchema().then(setSchema).catch(console.error);
+  }, []);
 
   const currentPlayer = useMemo(() => {
     if (!store.currentPlayerId) return null;
@@ -42,15 +48,26 @@ export default function LiveDisplay() {
                   alt={currentPlayer.name} 
                   className="w-56 h-56 rounded-full border-8 border-slate-700 shadow-2xl object-cover bg-white"
                 />
-                <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-lg font-black px-6 py-2 rounded-full uppercase tracking-widest shadow-lg">
-                  {currentPlayer.role}
+                <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-lg font-black px-6 py-2 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                  {(currentPlayer as any).role || (currentPlayer as any).position || 'Player'}
                 </span>
               </div>
               <h1 className="text-6xl font-black text-white tracking-tight leading-tight">{currentPlayer.name}</h1>
-              <div className="flex gap-6 mt-6 text-2xl text-purple-200 font-medium">
-                <span>Age: {currentPlayer.age}</span>
-                <span>•</span>
-                <span>Base: {formatCurrency(currentPlayer.basePrice)}</span>
+              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 mt-6 text-2xl text-purple-200 font-medium max-w-2xl mx-auto">
+                {schema?.fields?.filter((f: any) => f.type !== 'file' && f.id !== 'name' && f.id !== 'photo' && f.id !== 'basePrice').map((field: any) => {
+                  const val = (currentPlayer as any)[field.id];
+                  if (val === undefined || val === null || val === '') return null;
+                  return (
+                    <span key={field.id} className="flex items-center gap-2">
+                      <span className="opacity-70">{field.label}:</span>
+                      <span>{String(val)}</span>
+                    </span>
+                  );
+                })}
+                <span className="flex items-center gap-2 bg-purple-900/50 px-4 py-1.5 rounded-xl border border-purple-500/30 shadow-inner">
+                  <span className="opacity-70">Base:</span>
+                  <span className="font-bold text-white tracking-tight">{formatCurrency(currentPlayer.basePrice)}</span>
+                </span>
               </div>
             </div>
           ) : (

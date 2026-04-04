@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuctionStore, getNextBidAmount } from '../store/useAuctionStore';
+import { api } from '../lib/api';
 import { calculateMaxAllowedBid, canTeamBid } from '../utils/auctionLogic';
 import { Gavel, CheckCircle, XCircle, PlayCircle, RotateCcw } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
@@ -7,6 +8,11 @@ import PlayerSpinner from '../components/PlayerSpinner';
 
 export default function LiveAuction() {
   const store = useAuctionStore();
+  const [schema, setSchema] = useState<any>(null);
+
+  useEffect(() => {
+    api.getRegistrationSchema().then(setSchema).catch(console.error);
+  }, []);
 
   const currentPlayer = useMemo(() => {
     if (!store.currentPlayerId) return null;
@@ -88,14 +94,21 @@ export default function LiveAuction() {
               </div>
               
               <h2 className="text-3xl font-black text-slate-900 mt-6">{currentPlayer.name}</h2>
-              <div className="flex gap-4 mt-3 text-slate-600">
-                {(currentPlayer as any).age && (
-                  <>
-                    <span className="font-medium">Age: {(currentPlayer as any).age}</span>
-                    <span>•</span>
-                  </>
-                )}
-                <span className="font-medium">Base: {formatCurrency(currentPlayer.basePrice)}</span>
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-4 text-slate-600 max-w-lg mx-auto">
+                {schema?.fields?.filter((f: any) => f.type !== 'file' && f.id !== 'name' && f.id !== 'photo' && f.id !== 'basePrice').map((field: any) => {
+                  const val = (currentPlayer as any)[field.id];
+                  if (val === undefined || val === null || val === '') return null;
+                  return (
+                    <span key={field.id} className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-md text-sm border border-slate-200">
+                      <span className="font-semibold text-slate-500">{field.label}:</span>
+                      <span className="font-bold text-slate-800">{String(val)}</span>
+                    </span>
+                  );
+                })}
+                <span className="flex items-center gap-1.5 bg-purple-50 px-3 py-1 rounded-md text-sm border border-purple-200">
+                  <span className="font-semibold text-purple-600">Base:</span>
+                  <span className="font-bold text-purple-900">{formatCurrency(currentPlayer.basePrice)}</span>
+                </span>
               </div>
 
               {/* Bidding Stats */}
