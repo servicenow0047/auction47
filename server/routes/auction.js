@@ -54,24 +54,15 @@ router.get('/state', async (req, res, next) => {
     }));
 
     // Map players to frontend shape
-    const formattedPlayers = players.map(p => ({
-      id: p._id,
-      name: p.name,
-      age: p.age,
-      phone: p.phone,
-      email: p.email,
-      photo: p.photo,
-      role: p.role,
-      battingStyle: p.battingStyle,
-      bowlingStyle: p.bowlingStyle,
-      experience: p.experience,
-      previousTeam: p.previousTeam,
-      category: p.category,
-      basePrice: p.basePrice,
-      status: p.status,
-      soldPrice: p.soldPrice,
-      teamId: p.assignedTeamId,
-    }));
+    const formattedPlayers = players.map(p => {
+      const doc = p.toObject();
+      const { _id, __v, createdAt, updatedAt, assignedTeamId, ...rest } = doc;
+      return {
+        ...rest,
+        id: _id,
+        teamId: assignedTeamId,
+      };
+    });
 
     res.json({
       status: session.status,
