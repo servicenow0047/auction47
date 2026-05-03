@@ -99,20 +99,25 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
   },
 
   nextPlayer: async (id?: string) => {
-    const res = await api.nextPlayer(id);
-    if (res.completed) {
-      set({ status: 'completed' });
-      return;
+    try {
+      const res = await api.nextPlayer(id);
+      if (res.completed) {
+        set({ status: 'completed' });
+        return;
+      }
+      set(state => ({
+        status: 'running',
+        currentPlayerId: res.playerId,
+        currentBid: 0,
+        currentBidTeamId: null,
+        players: state.players.map(p =>
+          p.id === res.playerId ? { ...p, status: 'in_auction' } : p
+        ),
+      }));
+    } catch (err) {
+      console.error('[nextPlayer] Failed to fetch next player:', err);
+      throw err;
     }
-    set(state => ({
-      status: 'running',
-      currentPlayerId: res.playerId,
-      currentBid: 0,
-      currentBidTeamId: null,
-      players: state.players.map(p =>
-        p.id === res.playerId ? { ...p, status: 'in_auction' } : p
-      ),
-    }));
   },
 
   placeBid: async (teamId, amount) => {

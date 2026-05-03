@@ -96,9 +96,17 @@ export default function TeamDetailDrawer({ team, players, initialBudget, onClose
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 shrink-0">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center text-xl font-black">
-                {team.name.substring(0, 2).toUpperCase()}
-              </div>
+              {team.logo ? (
+                <img
+                  src={team.logo}
+                  alt={team.name}
+                  className="w-12 h-12 rounded-xl object-cover shrink-0 border-2 border-white/20"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center text-xl font-black">
+                  {team.name.substring(0, 2).toUpperCase()}
+                </div>
+              )}
               <div>
                 <h2 className="text-xl font-black tracking-tight">{team.name}</h2>
                 <p className="text-slate-400 text-sm">{soldPlayers.length} players bought</p>

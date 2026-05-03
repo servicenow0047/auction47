@@ -94,10 +94,15 @@ export default function PlayerSpinner({
         setPhase('revealing');
 
         // STEP 4: After reveal pause, push selection into the store
-        timerRef.current = setTimeout(() => {
-          onSelectPlayer(selectedWinner.id);
-          // parent's nextPlayer() will set currentPlayerId → this component
-          // unmounts / re-renders, so no need to reset phase here.
+        timerRef.current = setTimeout(async () => {
+          try {
+            await onSelectPlayer(selectedWinner.id);
+            // parent's nextPlayer() will set currentPlayerId → this component
+            // unmounts / re-renders, so no need to reset phase here.
+          } catch (err) {
+            console.error('Failed to select player:', err);
+            setPhase('idle'); // Reset so they can try again
+          }
         }, 1200);
       }
     };

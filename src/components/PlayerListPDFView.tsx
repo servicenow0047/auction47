@@ -360,6 +360,26 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Helvetica-Bold',
   },
+
+  // ── Watermark ─────────────────────────────────────────────────────────────
+  watermarkContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100, // Render on top of cards
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  watermarkText: {
+    fontSize: 80,
+    color: '#000000',
+    opacity: 0.04,
+    fontFamily: 'Helvetica-Bold',
+    transform: 'rotate(-45deg)',
+    textTransform: 'uppercase',
+  },
 });
 
 // ── Single player card ────────────────────────────────────────────────────────
@@ -493,6 +513,9 @@ export function ApprovedPlayersPDFDocument({
       {players.length === 0 ? (
         /* ── Empty state page ── */
         <Page size="A4" orientation="portrait" style={s.page}>
+          <View style={s.watermarkContainer} fixed>
+            <Text style={s.watermarkText}>AUCTION 47</Text>
+          </View>
           <View style={s.docHeader}>
             <View style={s.docLeft}>
               <Text style={s.docTitle}>Approved Players</Text>
@@ -516,6 +539,9 @@ export function ApprovedPlayersPDFDocument({
               orientation="portrait"
               style={s.page}
             >
+              <View style={s.watermarkContainer} fixed>
+                <Text style={s.watermarkText}>AUCTION 47</Text>
+              </View>
               {/* ── First page: full document header ── */}
               {pageIdx === 0 ? (
                 <View style={s.docHeader}>

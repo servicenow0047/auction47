@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, UsersRound, Settings, MonitorPlay, PlayCircle, XCircle, ScrollText, UserPlus, SlidersHorizontal, Menu } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuctionStore } from '../store/useAuctionStore';
@@ -7,6 +7,7 @@ import NetworkStatus from './NetworkStatus';
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const status = useAuctionStore(s => s.status);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -90,7 +91,7 @@ export default function Layout() {
           <button 
             onClick={() => {
               localStorage.removeItem('admin_password');
-              window.location.href = '/login';
+              navigate('/login');
             }}
             className={cn(
               "w-full flex items-center justify-center gap-2 bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors rounded-lg font-bold",

@@ -46,6 +46,7 @@ router.get('/state', async (req, res, next) => {
     const formattedTeams = teams.map(t => ({
       id: t._id,
       name: t.name,
+      logo: t.logo || '',
       budget: t.budget,
       totalSpent: t.totalSpent,
       maxPlayers: t.maxPlayers,

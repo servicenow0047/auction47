@@ -33,6 +33,7 @@ export interface Player {
 export interface Team {
   id: string;
   name: string;
+  logo?: string;          // base64 data URL for team logo
   budget: number;         // remaining budget
   players: string[];      // array of sold player IDs
   totalSpent: number;     // cumulative spend
@@ -44,7 +45,7 @@ export interface AuctionLogEntry {
   teamId?: string;
   amount?: number;
   timestamp: string;
-  type: 'bid' | 'sold' | 'unsold' | 'started' | 'spinner_selected' | 'bid_undone';
+  type: 'bid' | 'sold' | 'unsold' | 'started' | 'ended' | 'spinner_selected' | 'bid_undone';
 }
 
 export interface AuctionState {
