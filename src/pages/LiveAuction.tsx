@@ -417,7 +417,6 @@ export default function LiveAuction() {
       {/* Popups */}
       <PopupEventRenderer 
         event={popupEvent} 
-        tournamentName={store.settings.tournamentName} 
         tournamentLogo={store.settings.tournamentLogo}
         schema={schema}
         players={store.players}
