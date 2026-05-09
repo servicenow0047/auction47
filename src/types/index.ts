@@ -75,7 +75,7 @@ export interface AuctionState {
   placeBid: (teamId: string, amount: number) => void;
   sellPlayer: () => void;
   markUnsold: () => void;
-  resetAuction: (keepPlayers?: boolean) => void;
+  resetAuction: (keepPlayers?: boolean, tournamentName?: string, tournamentLogo?: string) => void;
   endAuction: () => void;
   readdUnsoldPlayers: () => void;
   readdSingleUnsoldPlayer: (playerId: string) => void;

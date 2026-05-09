@@ -443,14 +443,12 @@ export default function LiveAuction() {
 // Ensure the popup renders right before the closing fragment
 const PopupEventRenderer = ({ 
   event, 
-  tournamentName, 
   tournamentLogo,
   schema,
   players,
   onDismiss
 }: { 
   event: any; 
-  tournamentName?: string; 
   tournamentLogo?: string;
   schema?: any;
   players?: any[];

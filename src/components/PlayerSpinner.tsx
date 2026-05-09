@@ -27,7 +27,7 @@ export default function PlayerSpinner({
   tournamentLogo,
 }: PlayerSpinnerProps) {
   const [phase, setPhase] = useState<'idle' | 'spinning' | 'revealing'>('idle');
-  const [winner, setWinner] = useState<Player | null>(null);
+  const [_winner, setWinner] = useState<Player | null>(null);
   
   // Slot Machine Digits (0-9)
   const [digits, setDigits] = useState<[number, number, number]>([0, 0, 0]);
