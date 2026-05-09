@@ -32,7 +32,7 @@ export const api = {
   sellPlayer: ()                      => req<any>('POST', '/auction/sell'),
   markUnsold: ()                      => req<any>('POST', '/auction/unsold'),
   readdUnsold: ()                     => req<any>('POST', '/auction/readd-unsold'),
-  resetAuction: (keepPlayers?: boolean) => req<any>('POST', '/auction/reset', { keepPlayers }),
+  resetAuction: (keepPlayers?: boolean, tournamentName?: string, tournamentLogo?: string) => req<any>('POST', '/auction/reset', { keepPlayers, tournamentName, tournamentLogo }),
   endAuction: ()                      => req<any>('POST', '/auction/end'),
 
   // Players

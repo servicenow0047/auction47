@@ -34,9 +34,24 @@ export default function LiveDisplay() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-900 text-white font-sans overflow-hidden">
+    <div className="relative flex h-screen bg-slate-900 text-white font-sans overflow-hidden">
+      
+      {/* Massive Display Watermark */}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0">
+        <span className="text-white/[0.03] font-black text-[20rem] md:text-[30rem] leading-none tracking-tighter -rotate-[10deg] select-none whitespace-nowrap">
+          AUCTION 47
+        </span>
+      </div>
+
+      {/* Glowing Promotion Badge */}
+      <div className="absolute bottom-8 right-8 z-50 flex flex-col items-end opacity-70 drop-shadow-2xl bg-black/40 p-4 rounded-2xl backdrop-blur-md border border-white/10">
+        <span className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">Powered By</span>
+        <span className="bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text font-black text-3xl tracking-tighter drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">AUCTION 47</span>
+        <span className="text-purple-300 font-mono text-xs mt-1.5 drop-shadow-md">auction047@gmail.com</span>
+      </div>
+
       {/* Left panel: Player Focus */}
-      <div className="flex flex-col w-[45%] border-r border-slate-700 bg-slate-800/50">
+      <div className="relative z-10 flex flex-col w-[45%] border-r border-slate-700 bg-slate-800/50 backdrop-blur-sm">
         <div className="flex-none p-10 flex flex-col items-center justify-center min-h-[50%] border-b border-slate-700 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 to-indigo-900/10" />
           
@@ -97,7 +112,7 @@ export default function LiveDisplay() {
       </div>
 
       {/* Right panel: Teams Dashboard */}
-      <div className="flex-1 p-8 grid grid-cols-2 gap-6 bg-slate-950 overflow-y-auto">
+      <div className="relative z-10 flex-1 p-8 grid grid-cols-2 gap-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
         {store.teams.map(team => {
           const maxBid = calculateMaxAllowedBid(team, store.settings);
           const isLeading = store.currentBidTeamId === team.id;

@@ -249,7 +249,7 @@ router.post('/readd-unsold', requireAdmin, async (req, res, next) => {
 // POST reset entire auction (Create New Tournament)
 router.post('/reset', requireAdmin, async (req, res, next) => {
   try {
-    const { keepPlayers } = req.body;
+    const { keepPlayers, tournamentName, tournamentLogo } = req.body;
     
     // Always clear bidding history and logs
     await Bid.deleteMany({});
@@ -268,6 +268,14 @@ router.post('/reset', requireAdmin, async (req, res, next) => {
     
     // Reset session back to setup
     await AuctionSession.findOneAndUpdate({}, { status: 'setup', currentPlayerId: null, currentBid: 0, currentBidTeamId: null });
+    
+    // Update Tournament Settings (Name & Logo)
+    let settings = await AuctionSettings.findOne();
+    if (!settings) settings = new AuctionSettings();
+    if (tournamentName) settings.tournamentName = tournamentName;
+    if (tournamentLogo !== undefined) settings.tournamentLogo = tournamentLogo;
+    await settings.save();
+
     res.json({ success: true, hardReset: !keepPlayers });
   } catch (err) { next(err); }
 });

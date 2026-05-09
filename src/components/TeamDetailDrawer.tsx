@@ -5,6 +5,7 @@ import type { Team, Player } from '../types';
 import { formatCurrency } from '../lib/utils';
 import { SquadPDFDocument } from './TeamPDFView';
 import { useToast } from './Toast';
+import { useAuctionStore } from '../store/useAuctionStore';
 
 interface TeamDetailDrawerProps {
   team: Team | null;
@@ -14,6 +15,7 @@ interface TeamDetailDrawerProps {
 }
 
 export default function TeamDetailDrawer({ team, players, initialBudget, onClose }: TeamDetailDrawerProps) {
+  const store = useAuctionStore();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { toast } = useToast();
 
@@ -64,7 +66,12 @@ export default function TeamDetailDrawer({ team, players, initialBudget, onClose
 
       // Generate the PDF blob directly
       const blob = await pdf(
-        <SquadPDFDocument team={team} players={safePlayers} />
+        <SquadPDFDocument 
+          team={team} 
+          players={safePlayers} 
+          tournamentName={store.settings.tournamentName} 
+          tournamentLogo={store.settings.tournamentLogo} 
+        />
       ).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');

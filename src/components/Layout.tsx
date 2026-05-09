@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, UsersRound, Settings, MonitorPlay, PlayCircle, XCircle, ScrollText, UserPlus, SlidersHorizontal, Menu } from 'lucide-react';
+import { Home, Users, UsersRound, Settings, MonitorPlay, PlayCircle, XCircle, ScrollText, UserPlus, SlidersHorizontal, Menu, Clapperboard } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuctionStore } from '../store/useAuctionStore';
 import NetworkStatus from './NetworkStatus';
@@ -9,6 +9,7 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const status = useAuctionStore(s => s.status);
+  const settings = useAuctionStore(s => s.settings);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const navItems = [
@@ -21,6 +22,7 @@ export default function Layout() {
     { name: 'Activity Log', path: '/log', icon: ScrollText },
     { name: 'Form Builder', path: '/form-builder', icon: SlidersHorizontal },
     { name: 'Display Screen', path: '/display', icon: MonitorPlay },
+    { name: 'Pre-Show Video', path: '/preshow', icon: Clapperboard },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
@@ -36,7 +38,7 @@ export default function Layout() {
             {isSidebarOpen ? 'AUCTION 47' : 'A47'}
           </h1>
         </div>
-        
+
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1 overflow-x-hidden">
           {navItems.map((item) => (
             <Link
@@ -65,7 +67,7 @@ export default function Layout() {
             </Link>
           ))}
         </nav>
-        
+
         <div className="p-3 border-t border-slate-800 space-y-2">
           <div className={cn(
             "bg-slate-800 rounded-lg",
@@ -78,17 +80,17 @@ export default function Layout() {
               <span className={cn(
                 "w-2.5 h-2.5 rounded-full shrink-0",
                 status === 'setup' ? "bg-slate-500" :
-                status === 'ready' ? "bg-blue-500" :
-                status === 'running' ? "bg-green-500 animate-pulse" :
-                "bg-purple-500"
+                  status === 'ready' ? "bg-blue-500" :
+                    status === 'running' ? "bg-green-500 animate-pulse" :
+                      "bg-purple-500"
               )} />
               {isSidebarOpen && (
                 <span className="text-slate-200 capitalize font-medium">{status}</span>
               )}
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={() => {
               localStorage.removeItem('admin_password');
               navigate('/login');
@@ -101,6 +103,16 @@ export default function Layout() {
           >
             {isSidebarOpen && <span>Log Out Admin</span>}
           </button>
+
+          <div className={cn(
+            "mt-4 text-center transition-all duration-300",
+            isSidebarOpen ? "opacity-100" : "opacity-0 hidden"
+          )}>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Support & Feedback</p>
+            <a href="mailto:auction047@gmail.com" className="text-xs text-blue-400 font-mono hover:text-blue-300 hover:underline transition-colors truncate block">
+              auction047@gmail.com
+            </a>
+          </div>
         </div>
       </aside>
 
@@ -108,24 +120,35 @@ export default function Layout() {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 transition-all">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none"
             >
               <Menu size={22} />
             </button>
-            <h2 className="text-lg font-semibold text-slate-800 capitalize">
-              {navItems.find(i => i.path === location.pathname)?.name || 'AUCTION 47'}
-            </h2>
+            {location.pathname === '/auction' && (settings.tournamentName || settings.tournamentLogo) ? (
+              <div className="flex items-center gap-3">
+                {settings.tournamentLogo && (
+                  <img src={settings.tournamentLogo} alt="Logo" className="h-8 w-auto object-contain rounded" />
+                )}
+                <h2 className="text-lg font-black text-slate-800 tracking-tight uppercase">
+                  {settings.tournamentName || 'Live Auction'}
+                </h2>
+                <div className="ml-2 flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase tracking-widest bg-red-50 px-2 py-1 rounded-md border border-red-100">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> Live
+                </div>
+              </div>
+            ) : (
+              <h2 className="text-lg font-semibold text-slate-800 capitalize">
+                {navItems.find(i => i.path === location.pathname)?.name || 'AUCTION 47'}
+              </h2>
+            )}
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-8 flex flex-col">
-          <div className="flex-1">
+        <div className={cn("flex-1 flex flex-col", location.pathname === '/auction' ? 'overflow-hidden p-4 sm:p-6' : 'overflow-y-auto p-8')}>
+          <div className="flex-1 min-h-0">
             <Outlet />
           </div>
-          <footer className="mt-12 text-center text-sm font-bold text-slate-400">
-            &copy; {new Date().getFullYear()} AUCTION47
-          </footer>
         </div>
       </main>
 

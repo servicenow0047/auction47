@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuctionStore } from '../store/useAuctionStore';
 import { api } from '../lib/api';
-import { User, Upload, CheckCircle, AlertCircle, Users, Loader2 } from 'lucide-react';
+import { User, Upload, CheckCircle, AlertCircle, Users, Loader2, RefreshCcw } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { PlayerStatus, Player } from '../types';
+import PlayerCard from '../components/PlayerCard';
 
 export default function PlayerRegistration() {
   const store = useAuctionStore();
@@ -17,6 +18,7 @@ export default function PlayerRegistration() {
   const [fileData, setFileData] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSuccess, setIsSuccess] = useState(false);
+  const [registeredPlayer, setRegisteredPlayer] = useState<Player | null>(null);
 
   useEffect(() => {
     loadSchema();
@@ -145,23 +147,29 @@ export default function PlayerRegistration() {
       });
 
       store.addPlayer(newPlayer);
+      setRegisteredPlayer({ ...newPlayer, id: 'preview' } as Player); // Temporarily store for display
       setIsSuccess(true);
 
-      // Reset form
+      // Auto-reset after a longer duration (e.g., 10 seconds)
       setTimeout(() => {
-        setIsSuccess(false);
-        const resetData: Record<string, any> = {};
-        schema.fields.forEach((f: any) => {
-          if (f.type === 'select' && f.options.length > 0) resetData[f.id] = f.options[0];
-          else if (f.type === 'checkbox') resetData[f.id] = false;
-          else resetData[f.id] = '';
-        });
-        setFormData(resetData);
-        setFilePreviews({});
-        setFileData({});
-        setErrors({});
-      }, 4000);
+        resetForm();
+      }, 10000);
     }
+  };
+
+  const resetForm = () => {
+    setIsSuccess(false);
+    setRegisteredPlayer(null);
+    const resetData: Record<string, any> = {};
+    schema.fields.forEach((f: any) => {
+      if (f.type === 'select' && f.options.length > 0) resetData[f.id] = f.options[0];
+      else if (f.type === 'checkbox') resetData[f.id] = false;
+      else resetData[f.id] = '';
+    });
+    setFormData(resetData);
+    setFilePreviews({});
+    setFileData({});
+    setErrors({});
   };
 
   if (loading) {
@@ -173,17 +181,50 @@ export default function PlayerRegistration() {
   const otherFields = schema.fields.filter((f: any) => f.type !== 'file');
 
   return (
-    <div className="min-h-screen bg-slate-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto pb-12 animate-in fade-in">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Player Registration</h1>
-            <p className="text-slate-500 mt-2 font-medium">Register for the upcoming auction.</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-2 rounded-xl flex items-center gap-2 font-bold shadow-sm">
-              <Users size={20} className="text-emerald-500" />
-              <span>{registeredCount} Registered</span>
+    <div className="min-h-screen bg-slate-100 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+
+      {/* HUGE BACKGROUND WATERMARK */}
+      <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0">
+        <span className="text-slate-200/60 font-black text-[12rem] md:text-[20rem] leading-none tracking-tighter -rotate-[8deg] select-none whitespace-nowrap">
+          AUCTION 47
+        </span>
+      </div>
+
+      <div className="max-w-5xl mx-auto pb-12 animate-in fade-in relative z-10">
+        {/* BRANDED HERO SECTION */}
+        <div className="bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 overflow-hidden mb-8 relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-purple-600/20" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+          <div className="p-8 md:p-12 relative z-10 flex flex-col md:flex-row items-center gap-8">
+            {store.settings.tournamentLogo ? (
+              <img
+                src={store.settings.tournamentLogo}
+                alt="Tournament Logo"
+                className="w-32 h-32 md:w-40 md:h-40 object-contain rounded-2xl bg-white/5 p-4 shadow-xl border border-white/10"
+              />
+            ) : (
+              <div className="w-32 h-32 md:w-40 md:h-40 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-xl">
+                <Users size={48} className="text-white/20" />
+              </div>
+            )}
+
+            <div className="text-center md:text-left flex-1">
+              <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-emerald-500/30">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Registrations Open
+              </div>
+              <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-2">
+                {store.settings.tournamentName || 'Tournament Registration'}
+              </h1>
+              <p className="text-slate-300 text-lg font-medium max-w-2xl">
+                Complete the form below to register for the upcoming auction. Ensure all details are accurate.
+              </p>
+            </div>
+
+            <div className="shrink-0 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-center shadow-xl">
+              <div className="text-4xl font-black text-white mb-1">{registeredCount}</div>
+              <div className="text-sm font-bold text-slate-300 uppercase tracking-wider">Registered</div>
             </div>
           </div>
         </div>
@@ -237,142 +278,178 @@ export default function PlayerRegistration() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        {isSuccess && registeredPlayer ? (
+          <div className="flex flex-col items-center justify-center animate-in zoom-in-95 duration-500">
+            <h2 className="text-3xl font-black text-slate-800 mb-8 tracking-tight">Player Card Generated</h2>
 
-          {/* DYNAMIC FORM FIELDS */}
-          <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-slate-50 border-b border-slate-200 p-6">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <User className="text-blue-500" /> Player Information
-              </h2>
-              <p className="text-slate-500 text-sm mt-1">Please fill out all required details accurately.</p>
-            </div>
+            <PlayerCard
+              player={registeredPlayer}
+              schema={schema}
+              registrationNumber={store.players.length + 100}
+              className="mb-8"
+            />
 
-            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-              {otherFields.map((field: any) => (
-                <div key={field.id} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
-                  {field.type !== 'checkbox' && (
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                      {field.label} {field.required && <span className="text-red-500">*</span>}
-                    </label>
-                  )}
+            <button
+              onClick={resetForm}
+              className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-all flex items-center gap-2"
+            >
+              <RefreshCcw size={20} /> Register Another Player
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in duration-300">
 
-                  {field.type === 'select' ? (
-                    <select
-                      value={formData[field.id]}
-                      onChange={e => handleInputChange(field.id, e.target.value)}
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl border-2 transition-all outline-none font-medium",
-                        errors[field.id] ? "border-red-300 focus:border-red-500 bg-red-50" : "border-slate-200 focus:border-blue-500 hover:border-slate-300"
-                      )}
-                    >
-                      {!formData[field.id] && <option value="" disabled>Select an option...</option>}
-                      {field.options.map((opt: string) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  ) : field.type === 'checkbox' ? (
-                    <label className="flex items-center gap-3 cursor-pointer p-4 border-2 border-slate-200 rounded-xl hover:border-blue-400 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={formData[field.id]}
-                        onChange={e => handleInputChange(field.id, e.target.checked)}
-                        className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="font-semibold text-slate-700">{field.label} {field.required && <span className="text-red-500">*</span>}</span>
-                    </label>
-                  ) : field.type === 'textarea' ? (
-                    <textarea
-                      value={formData[field.id]}
-                      onChange={e => handleInputChange(field.id, e.target.value)}
-                      placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                      rows={4}
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl border-2 transition-all outline-none font-medium resize-y",
-                        errors[field.id] ? "border-red-300 focus:border-red-500 bg-red-50" : "border-slate-200 focus:border-blue-500 hover:border-slate-300"
-                      )}
-                    />
-                  ) : (
-                    <input
-                      type={field.type}
-                      value={formData[field.id]}
-                      onChange={e => handleInputChange(field.id, e.target.value)}
-                      placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                      className={cn(
-                        "w-full px-4 py-3 rounded-xl border-2 transition-all outline-none font-medium",
-                        errors[field.id] ? "border-red-300 focus:border-red-500 bg-red-50" : "border-slate-200 focus:border-blue-500 hover:border-slate-300"
-                      )}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* DYNAMIC FILE UPLOADS */}
-          {fileFields.length > 0 && (
+            {/* DYNAMIC FORM FIELDS */}
             <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-slate-50 border-b border-slate-200 p-6">
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <Upload className="text-purple-500" /> Documents & Photos
+                  <User className="text-blue-500" /> Player Information
                 </h2>
+                <p className="text-slate-500 text-sm mt-1">Please fill out all required details accurately.</p>
               </div>
 
               <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                {fileFields.map((field: any) => (
-                  <div key={field.id} className="space-y-4">
-                    <label className="block text-sm font-bold text-slate-700">
-                      {field.label} {field.required && <span className="text-red-500">*</span>}
-                    </label>
-                    <label className={cn(
-                      "relative block w-full aspect-[4/3] rounded-2xl border-4 border-dashed cursor-pointer overflow-hidden transition-all group",
-                      errors[field.id] ? "border-red-300 bg-red-50 hover:bg-red-100" : "border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-purple-300"
-                    )}>
-                      <input
-                        type="file"
-                        accept={field.accept || ''}
-                        onChange={e => handleFileUpload(e, field.id)}
-                        className="hidden"
-                      />
+                {otherFields.map((field: any) => (
+                  <div key={field.id} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
+                    {field.type !== 'checkbox' && (
+                      <label className="block text-sm font-bold text-slate-700 mb-2">
+                        {field.label} {field.required && <span className="text-red-500">*</span>}
+                      </label>
+                    )}
 
-                      {filePreviews[field.id] ? (
-                        <div className="absolute inset-0">
-                          {/* Try to show image if it is one, otherwise fallback */}
-                          <img src={filePreviews[field.id]} alt="Preview" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <p className="text-white font-bold flex items-center gap-2">
-                              <Upload size={20} /> Change File
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
-                          <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-purple-100 group-hover:text-purple-600 transition-all">
-                            <Upload size={28} />
-                          </div>
-                          <p className="font-bold text-slate-600">Click to upload</p>
-                          {field.accept && <p className="text-sm mt-1">{field.accept}</p>}
-                        </div>
-                      )}
-                    </label>
+                    {field.type === 'select' ? (
+                      <select
+                        value={formData[field.id]}
+                        onChange={e => handleInputChange(field.id, e.target.value)}
+                        className={cn(
+                          "w-full px-4 py-3 rounded-xl border-2 transition-all outline-none font-medium",
+                          errors[field.id] ? "border-red-300 focus:border-red-500 bg-red-50" : "border-slate-200 focus:border-blue-500 hover:border-slate-300"
+                        )}
+                      >
+                        {!formData[field.id] && <option value="" disabled>Select an option...</option>}
+                        {field.options.map((opt: string) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : field.type === 'checkbox' ? (
+                      <label className="flex items-center gap-3 cursor-pointer p-4 border-2 border-slate-200 rounded-xl hover:border-blue-400 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={formData[field.id]}
+                          onChange={e => handleInputChange(field.id, e.target.checked)}
+                          className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="font-semibold text-slate-700">{field.label} {field.required && <span className="text-red-500">*</span>}</span>
+                      </label>
+                    ) : field.type === 'textarea' ? (
+                      <textarea
+                        value={formData[field.id]}
+                        onChange={e => handleInputChange(field.id, e.target.value)}
+                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                        rows={4}
+                        className={cn(
+                          "w-full px-4 py-3 rounded-xl border-2 transition-all outline-none font-medium resize-y",
+                          errors[field.id] ? "border-red-300 focus:border-red-500 bg-red-50" : "border-slate-200 focus:border-blue-500 hover:border-slate-300"
+                        )}
+                      />
+                    ) : (
+                      <input
+                        type={field.type}
+                        value={formData[field.id]}
+                        onChange={e => handleInputChange(field.id, e.target.value)}
+                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                        className={cn(
+                          "w-full px-4 py-3 rounded-xl border-2 transition-all outline-none font-medium",
+                          errors[field.id] ? "border-red-300 focus:border-red-500 bg-red-50" : "border-slate-200 focus:border-blue-500 hover:border-slate-300"
+                        )}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
             </section>
-          )}
 
-          {/* SUBMIT */}
-          <div className="bg-slate-900 rounded-3xl p-8 text-center shadow-xl">
-            <h3 className="text-xl font-bold text-white mb-2">Ready to submit?</h3>
-            <p className="text-slate-400 mb-6">By continuing, you agree to the tournament registration rules.</p>
-            <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-500 text-white font-black text-lg py-4 px-12 rounded-2xl w-full md:w-auto shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] transition-all hover:scale-105"
-            >
-              Submit Application
-            </button>
+            {/* DYNAMIC FILE UPLOADS */}
+            {fileFields.length > 0 && (
+              <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-slate-50 border-b border-slate-200 p-6">
+                  <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <Upload className="text-purple-500" /> Documents & Photos
+                  </h2>
+                </div>
+
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {fileFields.map((field: any) => (
+                    <div key={field.id} className="space-y-4">
+                      <label className="block text-sm font-bold text-slate-700">
+                        {field.label} {field.required && <span className="text-red-500">*</span>}
+                      </label>
+                      <label className={cn(
+                        "relative block w-full aspect-[4/3] rounded-2xl border-4 border-dashed cursor-pointer overflow-hidden transition-all group",
+                        errors[field.id] ? "border-red-300 bg-red-50 hover:bg-red-100" : "border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-purple-300"
+                      )}>
+                        <input
+                          type="file"
+                          accept={field.accept || ''}
+                          onChange={e => handleFileUpload(e, field.id)}
+                          className="hidden"
+                        />
+
+                        {filePreviews[field.id] ? (
+                          <div className="absolute inset-0">
+                            {/* Try to show image if it is one, otherwise fallback */}
+                            <img src={filePreviews[field.id]} alt="Preview" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <p className="text-white font-bold flex items-center gap-2">
+                                <Upload size={20} /> Change File
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                            <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-purple-100 group-hover:text-purple-600 transition-all">
+                              <Upload size={28} />
+                            </div>
+                            <p className="font-bold text-slate-600">Click to upload</p>
+                            {field.accept && <p className="text-sm mt-1">{field.accept}</p>}
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* SUBMIT */}
+            <div className="bg-slate-900 rounded-3xl p-8 text-center shadow-xl">
+              <h3 className="text-xl font-bold text-white mb-2">Ready to submit?</h3>
+              <p className="text-slate-400 mb-6">By continuing, you agree to the tournament registration rules.</p>
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-black text-lg py-4 px-12 rounded-2xl w-full md:w-auto shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] transition-all hover:scale-105"
+              >
+                Submit Application
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Promotional Footer */}
+        <div className="mt-16 text-center flex flex-col items-center justify-center opacity-60 hover:opacity-100 transition-opacity duration-300">
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Powered By</p>
+          <div className="flex items-center gap-2">
+            <span className="bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text font-black text-3xl tracking-tighter drop-shadow-sm">
+              AUCTION 47
+            </span>
           </div>
-        </form>
+          <p className="text-slate-500 text-xs mt-2 font-medium max-w-sm">
+            The ultimate platform for professional sports auctions and tournament management.
+          </p>
+          <a href="mailto:auction047@gmail.com" className="text-indigo-600 font-mono mt-3 hover:text-purple-600 hover:underline transition-colors font-bold flex items-center gap-2">
+            Support: auction047@gmail.com
+          </a>
+        </div>
       </div>
     </div>
   );

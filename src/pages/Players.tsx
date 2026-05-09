@@ -166,7 +166,12 @@ export default function Players() {
       );
 
       const blob = await pdf(
-        <ApprovedPlayersPDFDocument players={safePlayers} schema={schema} />
+        <ApprovedPlayersPDFDocument 
+          players={safePlayers} 
+          schema={schema} 
+          eventName={store.settings.tournamentName} 
+          tournamentLogo={store.settings.tournamentLogo} 
+        />
       ).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -362,7 +367,12 @@ export default function Players() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-bold text-slate-900 truncate">{player.name}</h3>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="shrink-0 bg-slate-800 text-white text-[10px] font-black px-2 py-0.5 rounded-md tracking-wider border border-slate-600">
+                            {store.players.findIndex(p => p.id === player.id) + 101}
+                          </span>
+                          <h3 className="font-bold text-slate-900 truncate">{player.name}</h3>
+                        </div>
                         <span className={cn('text-[10px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap shrink-0', STATUS_BADGE[player.status])}>
                           {STATUS_LABEL[player.status] ?? player.status}
                         </span>

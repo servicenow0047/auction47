@@ -29,6 +29,8 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
       set({
         status: data.status,
         settings: {
+          tournamentName: data.settings?.tournamentName ?? defaultSettings.tournamentName,
+          tournamentLogo: data.settings?.tournamentLogo ?? defaultSettings.tournamentLogo,
           numTeams:      data.settings?.numTeams      ?? 8,
           initialBudget: data.settings?.initialBudget ?? 100000,
           minPlayers:    data.settings?.minPlayers    ?? 7,
@@ -207,10 +209,15 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
     });
   },
 
-  resetAuction: async (keepPlayers?: boolean) => {
-    const res = await api.resetAuction(keepPlayers);
+  resetAuction: async (keepPlayers?: boolean, tournamentName?: string, tournamentLogo?: string) => {
+    const res = await api.resetAuction(keepPlayers, tournamentName, tournamentLogo);
     set(state => ({
       status:            'setup',
+      settings: {
+        ...state.settings,
+        tournamentName: tournamentName || 'AUCTION 47',
+        tournamentLogo: tournamentLogo || '',
+      },
       currentPlayerId:   null,
       currentBid:        0,
       currentBidTeamId:  null,

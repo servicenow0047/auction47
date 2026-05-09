@@ -1,6 +1,8 @@
 import type { Settings, Team, Player } from '../types';
 
 export const defaultSettings: Settings = {
+  tournamentName: 'AUCTION 47',
+  tournamentLogo: '',
   numTeams: 8,
   initialBudget: 50000,
   minPlayers: 15,

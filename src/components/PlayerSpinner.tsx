@@ -1,51 +1,45 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Player } from '../types';
-import { formatCurrency, cn } from '../lib/utils';
-import { RefreshCw, Shuffle, Trophy, Users } from 'lucide-react';
-import { api } from '../lib/api';
+import { cn } from '../lib/utils';
+import { RefreshCw, Play } from 'lucide-react';
 
 interface PlayerSpinnerProps {
   availablePlayers: Player[];
+  allPlayers: Player[];
   onSelectPlayer: (id: string) => void;
   onReaddUnsold?: () => void;
   hasUnsoldPlayers?: boolean;
+  tournamentName?: string;
+  tournamentLogo?: string;
 }
 
 // ---------------------------------------------------------------------------
-// SPINNER LOGIC
-//
-// 1. On SPIN click → pick true winner first with Math.random()
-// 2. Run a purely cosmetic animation (rapidly cycle displayed names/photos)
-// 3. When animation ends → snap to the predetermined winner
-// 4. Call onSelectPlayer(winner.id) which updates the store
-//
-// The animation NEVER controls which player is selected.
+// SLOT MACHINE SPINNER LOGIC
 // ---------------------------------------------------------------------------
 
 export default function PlayerSpinner({
   availablePlayers,
+  allPlayers,
   onSelectPlayer,
   onReaddUnsold,
   hasUnsoldPlayers = false,
+  tournamentName,
+  tournamentLogo,
 }: PlayerSpinnerProps) {
-  // The player shown in the spinning "slot" (purely cosmetic during animation)
-  const [displayIndex, setDisplayIndex] = useState(0);
   const [phase, setPhase] = useState<'idle' | 'spinning' | 'revealing'>('idle');
   const [winner, setWinner] = useState<Player | null>(null);
-  const [schema, setSchema] = useState<any>(null);
-
-  useEffect(() => {
-    api.getRegistrationSchema().then(setSchema).catch(console.error);
-  }, []);
+  
+  // Slot Machine Digits (0-9)
+  const [digits, setDigits] = useState<[number, number, number]>([0, 0, 0]);
 
   // useRef so we can safely clear it from inside the closure
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset when the player pool changes (e.g. after readdUnsold)
+  // Reset when the player pool changes
   useEffect(() => {
     setPhase('idle');
     setWinner(null);
-    setDisplayIndex(0);
+    setDigits([0, 0, 0]);
   }, [availablePlayers.length]);
 
   // Cleanup on unmount
@@ -59,51 +53,57 @@ export default function PlayerSpinner({
     // Guard: must have players and must not already be spinning
     if (availablePlayers.length === 0 || phase !== 'idle') return;
 
-    // STEP 1: Pick the true winner using Math.random() BEFORE any animation
+    // STEP 1: Pick the true winner
     const randomIndex = Math.floor(Math.random() * availablePlayers.length);
     const selectedWinner = availablePlayers[randomIndex];
-
     setWinner(selectedWinner);
     setPhase('spinning');
 
-    // STEP 2: Animate — cycle through indexes rapidly then decelerate
-    // All of this is purely visual; it does NOT affect who wins.
-    const totalFrames = 30;
+    // Calculate final padded registration number (e.g., "067")
+    const regNum = allPlayers.findIndex((p) => p.id === selectedWinner.id) + 101;
+    const regStr = String(regNum).padStart(3, '0');
+    const targetDigits: [number, number, number] = [
+      parseInt(regStr[0]),
+      parseInt(regStr[1]),
+      parseInt(regStr[2])
+    ];
+
+    // STEP 2: Animate — rapidly cycle digits
+    const totalFrames = 40;
     let frame = 0;
 
     const animate = () => {
       frame++;
 
-      // Cycle display index cosmetically (wrap around pool)
-      setDisplayIndex((prev) => (prev + 1) % availablePlayers.length);
-
       if (frame < totalFrames) {
+        // Randomize all digits while spinning
+        setDigits([
+          Math.floor(Math.random() * 10),
+          Math.floor(Math.random() * 10),
+          Math.floor(Math.random() * 10)
+        ]);
+
         // Accelerate first half, decelerate second half
         const progress = frame / totalFrames;
-        let delay: number;
-        if (progress < 0.4) {
-          delay = 40 + progress * 30; // speeds up: 40ms → ~52ms
-        } else {
-          delay = 52 + (progress - 0.4) * 300; // slows down: 52ms → ~232ms
-        }
+        let delay = progress < 0.5 
+          ? 30 + progress * 20 
+          : 50 + (progress - 0.5) * 150;
+          
         timerRef.current = setTimeout(animate, delay);
       } else {
-        // STEP 3: Snap display to the actual winner
-        const winnerIdx = availablePlayers.findIndex((p) => p.id === selectedWinner.id);
-        setDisplayIndex(winnerIdx >= 0 ? winnerIdx : 0);
+        // STEP 3: Snap display to the actual winner's number
+        setDigits(targetDigits);
         setPhase('revealing');
 
         // STEP 4: After reveal pause, push selection into the store
         timerRef.current = setTimeout(async () => {
           try {
             await onSelectPlayer(selectedWinner.id);
-            // parent's nextPlayer() will set currentPlayerId → this component
-            // unmounts / re-renders, so no need to reset phase here.
           } catch (err) {
             console.error('Failed to select player:', err);
-            setPhase('idle'); // Reset so they can try again
+            setPhase('idle'); 
           }
-        }, 1200);
+        }, 1500); // 1.5 second dramatic pause before closing popup
       }
     };
 
@@ -113,152 +113,150 @@ export default function PlayerSpinner({
   // ─── Empty pool screen ───────────────────────────────────────────────────
   if (availablePlayers.length === 0) {
     return (
-      <div className="py-16 flex flex-col items-center justify-center text-center px-4">
-        <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-6">
-          <Trophy size={36} className="text-amber-500" />
-        </div>
-        <h3 className="text-2xl font-black text-slate-800 mb-2">Auction Completed</h3>
-        <p className="text-slate-500 mb-8">All available players have been processed.</p>
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-md">
+        <h3 className="text-4xl font-black text-white mb-4">Auction Completed</h3>
+        <p className="text-slate-400 mb-8 text-xl">All available players have been processed.</p>
 
         {hasUnsoldPlayers && onReaddUnsold && (
           <button
             onClick={onReaddUnsold}
-            className="bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white px-6 py-3 rounded-xl font-bold shadow-md transition-all flex items-center gap-2 hover:scale-105 active:scale-95"
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-8 py-4 rounded-2xl font-black text-xl shadow-[0_0_30px_rgba(168,85,247,0.4)] transition-all flex items-center gap-3 hover:scale-105 active:scale-95"
           >
-            <RefreshCw size={18} />
-            Re-auction Unsold Players
+            <RefreshCw size={24} />
+            Re-auction Unsold
           </button>
         )}
       </div>
     );
   }
 
-  // ─── Main spinner ─────────────────────────────────────────────────────────
-  const displayPlayer = availablePlayers[displayIndex] ?? availablePlayers[0];
+  // ─── Slot Machine UI ───────────────────────────────────────────────────────
   const isSpinning = phase === 'spinning';
   const isRevealing = phase === 'revealing';
 
   return (
-    <div className="py-6 flex flex-col items-center w-full px-4">
-      {/* Stats bar */}
-      <div className="flex items-center gap-2 mb-6 bg-purple-50 border border-purple-200 text-purple-800 px-4 py-2 rounded-full text-sm font-bold shadow-sm">
-        <Users size={14} />
-        <span>{availablePlayers.length} players remaining in pool</span>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050B14]/95 backdrop-blur-lg animate-in fade-in duration-500">
+      
+      {/* Sci-Fi Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Neon light beams */}
+        <div className="absolute top-0 left-1/4 w-px h-full bg-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.5)] transform -rotate-12" />
+        <div className="absolute top-0 right-1/4 w-px h-full bg-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.5)] transform rotate-12" />
+        <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-blue-900/20 to-transparent" />
+        <div className="absolute top-0 w-full h-1/4 bg-gradient-to-b from-purple-900/20 to-transparent" />
       </div>
 
-      <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">
-        Random Player Draw
-      </p>
-
-      {/* Spinning card */}
-      <div
-        className={cn(
-          'relative w-full max-w-xs rounded-3xl p-6 flex flex-col items-center justify-center border-4 shadow-xl transition-all duration-300 overflow-hidden',
-          isSpinning
-            ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-purple-200'
-            : isRevealing
-            ? 'border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 shadow-green-200 scale-[1.03]'
-            : 'border-slate-200 bg-white'
-        )}
-      >
-        {/* Animated shimmer during spin */}
-        {isSpinning && (
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -inset-full animate-[spin_1s_linear_infinite] bg-gradient-conic from-purple-400/0 via-purple-400/20 to-purple-400/0" />
-          </div>
-        )}
-
-        {/* Player photo */}
-        <div className="relative mb-4 z-10">
-          <img
-            key={displayPlayer.id} // key change triggers re-render flash
-            src={displayPlayer.photo}
-            alt={displayPlayer.name}
-            className={cn(
-              'w-28 h-28 rounded-full border-4 object-cover bg-white shadow-md transition-all',
-              isSpinning ? 'border-purple-300 opacity-80 blur-[0.5px]' :
-              isRevealing ? 'border-green-400 ring-4 ring-green-200 ring-offset-2' :
-              'border-slate-200'
-            )}
-          />
-          {!isSpinning && (
-            <span
-              className={cn(
-                'absolute -bottom-2 left-1/2 -translate-x-1/2 text-white text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap shadow',
-                isRevealing ? 'bg-green-600' : 'bg-slate-700'
-              )}
+      <div className="relative flex flex-col items-center w-full max-w-4xl px-4">
+        
+        {/* Tournament Branding */}
+        <div className="flex flex-col items-center mb-4 drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+          {tournamentLogo && (
+            <img src={tournamentLogo} alt="Logo" className="h-16 object-contain mb-3" />
+          )}
+          {tournamentName && (
+            <h1
+              className="font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF500] to-[#FFB800] uppercase tracking-widest text-center filter drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] leading-tight"
+              style={{ fontSize: 'clamp(1.4rem, 4vw, 3.5rem)' }}
             >
-              {displayPlayer.role}
-            </span>
+              {tournamentName}
+            </h1>
           )}
         </div>
 
-        {/* Player name */}
-        <h2
-          className={cn(
-            'text-2xl font-black text-center tracking-tight z-10 transition-all',
-            isSpinning ? 'text-purple-600 blur-[0.5px] opacity-70' :
-            isRevealing ? 'text-green-700' : 'text-slate-900'
-          )}
-        >
-          {isSpinning ? '???' : displayPlayer.name}
-        </h2>
+        {/* Slot Machine Container */}
+        <div className="relative">
+          {/* Metallic Gold Frame */}
+          <div className="bg-gradient-to-b from-[#FFE066] via-[#B8860B] to-[#DAA520] p-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] border-4 border-[#FFF500]/50 relative overflow-hidden">
+            
+            {/* Glossy overlay on frame */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0 pointer-events-none" />
 
-        {/* Player meta */}
-        <div
-          className={cn(
-            'flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2 text-sm font-medium z-10 transition-opacity px-2',
-            isSpinning ? 'opacity-0' : 'opacity-100 text-slate-500'
-          )}
-        >
-          {schema?.fields?.filter((f: any) => f.type !== 'file' && f.id !== 'name' && f.id !== 'photo' && f.id !== 'basePrice').slice(0, 3).map((field: any) => {
-            const val = (displayPlayer as any)[field.id];
-            if (val === undefined || val === null || val === '') return null;
-            return (
-              <span key={field.id} className="flex items-center gap-1 whitespace-nowrap">
-                <span className="opacity-70">{field.label}:</span>
-                <span className="text-slate-700">{String(val)}</span>
-              </span>
-            );
-          })}
-          <span className="flex items-center gap-1 whitespace-nowrap">
-            <span className="opacity-70">Base:</span>
-            <span className="font-bold text-purple-700">{formatCurrency(displayPlayer.basePrice)}</span>
-          </span>
-        </div>
+            {/* Inner Dark Screen */}
+            <div className="bg-gradient-to-b from-slate-900 to-black p-6 rounded-2xl border-4 border-slate-800 shadow-inner flex gap-4">
+              
+              {/* Digit 1 */}
+              <div className="w-20 h-28 md:w-28 md:h-40 bg-gradient-to-b from-slate-200 via-white to-slate-300 rounded-xl shadow-[inset_0_10px_20px_rgba(0,0,0,0.5)] border-2 border-slate-400 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/20 pointer-events-none" />
+                <span className={cn(
+                  "text-6xl md:text-8xl font-black font-mono text-slate-900 drop-shadow-md",
+                  isSpinning ? "blur-[2px] opacity-80 animate-pulse" : "opacity-100"
+                )}>
+                  {digits[0]}
+                </span>
+              </div>
 
-        {/* Revealing banner */}
-        {isRevealing && winner && (
-          <div className="mt-4 z-10 w-full bg-green-500 text-white text-center font-black text-sm py-2 rounded-xl uppercase tracking-widest animate-bounce">
-            🎯 Player Selected!
+              {/* Digit 2 */}
+              <div className="w-20 h-28 md:w-28 md:h-40 bg-gradient-to-b from-slate-200 via-white to-slate-300 rounded-xl shadow-[inset_0_10px_20px_rgba(0,0,0,0.5)] border-2 border-slate-400 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/20 pointer-events-none" />
+                <span className={cn(
+                  "text-6xl md:text-8xl font-black font-mono text-slate-900 drop-shadow-md",
+                  isSpinning ? "blur-[2px] opacity-80 animate-pulse delay-75" : "opacity-100"
+                )}>
+                  {digits[1]}
+                </span>
+              </div>
+
+              {/* Digit 3 */}
+              <div className="w-20 h-28 md:w-28 md:h-40 bg-gradient-to-b from-slate-200 via-white to-slate-300 rounded-xl shadow-[inset_0_10px_20px_rgba(0,0,0,0.5)] border-2 border-slate-400 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/20 pointer-events-none" />
+                <span className={cn(
+                  "text-6xl md:text-8xl font-black font-mono text-slate-900 drop-shadow-md",
+                  isSpinning ? "blur-[2px] opacity-80 animate-pulse delay-150" : "opacity-100"
+                )}>
+                  {digits[2]}
+                </span>
+              </div>
+
+            </div>
           </div>
-        )}
-      </div>
+          
+          {/* Decorative screws/bolts on frame */}
+          <div className="absolute top-6 left-6 w-3 h-3 rounded-full bg-slate-800 border border-slate-600 shadow-inner" />
+          <div className="absolute top-6 right-6 w-3 h-3 rounded-full bg-slate-800 border border-slate-600 shadow-inner" />
+          <div className="absolute bottom-6 left-6 w-3 h-3 rounded-full bg-slate-800 border border-slate-600 shadow-inner" />
+          <div className="absolute bottom-6 right-6 w-3 h-3 rounded-full bg-slate-800 border border-slate-600 shadow-inner" />
+        </div>
 
-      {/* Spin button */}
-      <button
-        id="spin-player-btn"
-        onClick={startSpin}
-        disabled={phase !== 'idle'}
-        className={cn(
-          'mt-6 w-full max-w-xs py-4 rounded-2xl font-black text-lg uppercase tracking-widest shadow-lg transition-all flex items-center justify-center gap-3',
-          phase !== 'idle'
-            ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-500 hover:to-indigo-500 hover:shadow-lg hover:shadow-purple-300 hover:scale-105 active:scale-95'
-        )}
-      >
-        {isSpinning ? (
-          <span className="flex items-center gap-2 animate-pulse">
-            <Shuffle size={20} className="animate-spin" /> Spinning...
-          </span>
-        ) : isRevealing ? (
-          <span>Starting Auction...</span>
-        ) : (
-          <span className="flex items-center gap-2">
-            <Shuffle size={20} /> Spin Player
-          </span>
-        )}
-      </button>
+        {/* Start Button & Meta */}
+        <div className="mt-8 flex flex-col items-center">
+          <button
+            onClick={startSpin}
+            disabled={phase !== 'idle'}
+            className={cn(
+              'px-12 py-4 rounded-full font-black text-3xl uppercase tracking-widest shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all border-4 flex items-center gap-4',
+              phase !== 'idle'
+                ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed shadow-none'
+                : isRevealing
+                ? 'bg-emerald-500 text-white border-emerald-300 shadow-[0_0_50px_rgba(16,185,129,0.8)] scale-110'
+                : 'bg-gradient-to-b from-[#22C55E] to-[#15803D] text-white border-[#86EFAC] hover:from-[#4ADE80] hover:to-[#16A34A] hover:scale-105 active:scale-95 hover:shadow-[0_0_40px_rgba(34,197,94,0.6)]'
+            )}
+          >
+            {isSpinning ? (
+              <span className="animate-pulse">Spinning...</span>
+            ) : isRevealing ? (
+              'PLAYER SELECTED!'
+            ) : (
+              <>
+                START <Play size={28} fill="currentColor" />
+              </>
+            )}
+          </button>
+          
+          {phase === 'idle' && (
+            <p className="text-slate-400 mt-6 text-sm font-bold tracking-widest uppercase">
+              {availablePlayers.length} Players Remaining in Pool
+            </p>
+          )}
+        </div>
+
+        {/* Bottom Left Branding Badge */}
+        <div className="absolute bottom-8 left-0 -translate-x-1/2 flex flex-col items-start bg-black/50 backdrop-blur-md px-6 py-4 rounded-r-2xl border-r border-t border-b border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.6)]">
+          <p className="text-white/50 text-[10px] font-black uppercase tracking-[0.3em] mb-1">Powered By</p>
+          <p className="bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text font-black text-4xl tracking-wider drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] leading-none">AUCTION 47</p>
+          <p className="text-purple-300/80 font-mono text-xs mt-2 tracking-wide">auction047@gmail.com</p>
+        </div>
+
+      </div>
     </div>
   );
 }

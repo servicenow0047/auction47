@@ -12,16 +12,16 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password) return;
-    
+
     setLoading(true);
     setError('');
-    
+
     try {
       // Temporarily store it to test the API
       localStorage.setItem('admin_password', password);
-      
+
       await api.checkPassword();
-      
+
       // If successful, redirect to dashboard
       navigate('/');
     } catch (err: any) {
@@ -34,14 +34,22 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+    <div className="relative min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 overflow-hidden">
+
+      {/* Massive Background Watermark */}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0">
+        <div className="text-white/[0.03] font-black text-[15rem] md:text-[25rem] leading-none tracking-tighter -rotate-12 select-none whitespace-nowrap">
+          AUCTION 47
+        </div>
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300">
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 bg-purple-100 text-purple-600 flex items-center justify-center rounded-2xl shadow-inner">
             <Lock size={32} />
           </div>
         </div>
-        
+
         <div className="text-center mb-8">
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Admin Portal</h1>
           <p className="text-slate-500 font-medium mt-1">Enter master password to continue</p>
@@ -65,7 +73,7 @@ export default function Login() {
               autoFocus
             />
           </div>
-          
+
           <button
             type="submit"
             disabled={loading || !password}
@@ -74,6 +82,15 @@ export default function Login() {
             {loading ? <Loader2 size={20} className="animate-spin" /> : 'Enter Dashboard'}
           </button>
         </form>
+      </div>
+
+      {/* Promotional Footer */}
+      <div className="absolute bottom-8 left-0 w-full flex flex-col items-center justify-center z-10 opacity-60 hover:opacity-100 transition-opacity">
+        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Powered By</p>
+        <p className="text-white text-xl font-black tracking-widest mb-1">AUCTION 47</p>
+        <a href="mailto:auction047@gmail.com" className="text-purple-400 text-xs font-mono hover:text-purple-300 hover:underline transition-colors flex items-center gap-2">
+          Support: auction047@gmail.com
+        </a>
       </div>
     </div>
   );

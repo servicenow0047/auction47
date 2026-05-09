@@ -1,4 +1,6 @@
 export interface Settings {
+  tournamentName: string;
+  tournamentLogo?: string;
   numTeams: number;
   initialBudget: number;
   minPlayers: number;

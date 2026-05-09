@@ -10,10 +10,25 @@ export default function Home() {
   const navigate = useNavigate();
   const [showResetModal, setShowResetModal] = useState(false);
   const [confirmScratch, setConfirmScratch] = useState(false);
+  const [tournamentName, setTournamentName] = useState('');
+  const [tournamentLogo, setTournamentLogo] = useState('');
 
   const openResetModal = () => {
     setConfirmScratch(false);
+    setTournamentName('');
+    setTournamentLogo('');
     setShowResetModal(true);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTournamentLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const soldPlayers = store.players.filter(p => p.status === 'sold').length;
@@ -29,7 +44,11 @@ export default function Home() {
   ];
 
   const handleCreateNew = (keepPlayers: boolean) => {
-    store.resetAuction(keepPlayers);
+    if (!tournamentName.trim()) {
+      alert('Tournament Name is required.');
+      return;
+    }
+    store.resetAuction(keepPlayers, tournamentName.trim(), tournamentLogo);
     setShowResetModal(false);
   };
 
@@ -79,6 +98,22 @@ export default function Home() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* SUPPORT & PROMOTION CARD */}
+      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-4 border border-blue-800/50">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center shrink-0 border border-white/20">
+            <span className="font-black text-xl tracking-tighter">A47</span>
+          </div>
+          <div>
+            <h3 className="text-lg font-bold">Need Help or Custom Features?</h3>
+            <p className="text-blue-200 text-sm">Contact the AUCTION 47 team for priority support, feature requests, or tournament management assistance.</p>
+          </div>
+        </div>
+        <a href="mailto:auction047@gmail.com" className="shrink-0 bg-blue-500 hover:bg-blue-400 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2">
+          auction047@gmail.com
+        </a>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -203,20 +238,49 @@ export default function Home() {
                   </div>
                   <h2 className="text-xl font-black text-slate-900 mb-2">Create New Tournament</h2>
                   <p className="text-slate-600 text-sm mb-6">
-                    Creating a new tournament will permanently delete the bidding history and reset the current workspace. How would you like to handle the registered players?
+                    Creating a new tournament will permanently delete the bidding history and reset the current workspace.
                   </p>
+                  
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Tournament Name *</label>
+                      <input 
+                        type="text" 
+                        value={tournamentName}
+                        onChange={e => setTournamentName(e.target.value)}
+                        placeholder="e.g. Premier League 2026"
+                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Tournament Logo (Optional)</label>
+                      <div className="flex items-center gap-4">
+                        {tournamentLogo && (
+                          <img src={tournamentLogo} alt="Logo Preview" className="w-12 h-12 rounded-lg object-contain bg-slate-50 border border-slate-200" />
+                        )}
+                        <label className="flex-1 border-2 border-dashed border-slate-300 rounded-xl p-3 text-center cursor-pointer hover:bg-slate-50 hover:border-indigo-400 transition-colors">
+                          <span className="text-sm font-medium text-slate-600">{tournamentLogo ? 'Change Logo' : 'Upload Logo'}</span>
+                          <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-slate-600 text-sm mb-3 font-semibold">How would you like to handle the registered players?</p>
                   
                   <div className="space-y-3">
                     <button 
                       onClick={() => handleCreateNew(true)}
-                      className="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all group"
+                      disabled={!tournamentName.trim()}
+                      className="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:bg-transparent"
                     >
                       <h3 className="font-bold text-slate-900 group-hover:text-indigo-700">Retain Player Pool & Teams</h3>
                       <p className="text-xs text-slate-500 mt-1">Keeps all registered players and teams, but resets their sold status. Good for rematches.</p>
                     </button>
                     <button 
                       onClick={() => setConfirmScratch(true)}
-                      className="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-red-500 hover:bg-red-50 transition-all group"
+                      disabled={!tournamentName.trim()}
+                      className="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-red-500 hover:bg-red-50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:bg-transparent"
                     >
                       <h3 className="font-bold text-red-600 group-hover:text-red-700">Start from Scratch</h3>
                       <p className="text-xs text-slate-500 mt-1">Wipes all teams and players. A completely blank slate.</p>

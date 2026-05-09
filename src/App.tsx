@@ -11,6 +11,7 @@ import UnsoldPlayers from './pages/UnsoldPlayers';
 import AuctionLog from './pages/AuctionLog';
 import PlayerRegistration from './pages/PlayerRegistration';
 import Login from './pages/Login';
+import PreShowDisplay from './pages/PreShowDisplay';
 import { ToastProvider } from './components/Toast';
 
 import { useEffect } from 'react';
@@ -47,6 +48,7 @@ function App() {
             <Route path="log" element={<AuctionLog />} />
             <Route path="settings" element={<Settings />} />
             <Route path="form-builder" element={<FormBuilder />} />
+            <Route path="preshow" element={<PreShowDisplay />} />
           </Route>
           
           {/* Public Routes */}

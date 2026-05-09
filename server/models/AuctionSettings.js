@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const settingsSchema = new mongoose.Schema(
   {
+    tournamentName: { type: String, default: 'AUCTION 47' },
+    tournamentLogo: { type: String, default: '' },
     numTeams:      { type: Number, default: 8 },
     initialBudget: { type: Number, default: 100000 },
     minPlayers:    { type: Number, default: 7 },
