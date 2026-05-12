@@ -36,6 +36,7 @@ export const useAuctionStore = create<AuctionState>((set, get) => ({
           minPlayers:    data.settings?.minPlayers    ?? 7,
           maxPlayers:    data.settings?.maxPlayers    ?? 15,
           basePrice:     data.settings?.basePrice     ?? 1000,
+          registrationOpen: data.settings?.registrationOpen ?? defaultSettings.registrationOpen,
           increments:    data.settings?.increments    ?? defaultSettings.increments,
         },
         players:         data.players  ?? [],

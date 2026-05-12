@@ -6,6 +6,7 @@ export interface Settings {
   minPlayers: number;
   maxPlayers: number;
   basePrice: number;
+  registrationOpen?: boolean;
   increments: { upTo: number; increment: number }[];
 }
 

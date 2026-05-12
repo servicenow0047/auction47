@@ -8,6 +8,7 @@ export const defaultSettings: Settings = {
   minPlayers: 15,
   maxPlayers: 15,
   basePrice: 1000,
+  registrationOpen: true,
   increments: [
     { upTo: 3000, increment: 200 },
     { upTo: 10000, increment: 500 },

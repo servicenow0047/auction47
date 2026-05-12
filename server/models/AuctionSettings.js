@@ -9,6 +9,7 @@ const settingsSchema = new mongoose.Schema(
     minPlayers:    { type: Number, default: 7 },
     maxPlayers:    { type: Number, default: 15 },
     basePrice:     { type: Number, default: 1000 },
+    registrationOpen: { type: Boolean, default: true },
     increments: {
       type: [{ upTo: Number, increment: Number }],
       default: [

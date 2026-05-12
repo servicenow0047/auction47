@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuctionStore } from '../store/useAuctionStore';
 import { api } from '../lib/api';
-import { User, Upload, CheckCircle, AlertCircle, Users, Loader2, RefreshCcw } from 'lucide-react';
+import { User, Upload, CheckCircle, AlertCircle, Users, Loader2, RefreshCcw, XCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { PlayerStatus, Player } from '../types';
 import PlayerCard from '../components/PlayerCard';
@@ -210,10 +210,17 @@ export default function PlayerRegistration() {
             )}
 
             <div className="text-center md:text-left flex-1">
-              <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-emerald-500/30">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Registrations Open
-              </div>
+              {store.settings.registrationOpen !== false ? (
+                <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-emerald-500/30">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Registrations Open
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-red-500/30">
+                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                  Registrations Closed
+                </div>
+              )}
               <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-2">
                 {store.settings.tournamentName || 'Tournament Registration'}
               </h1>
@@ -295,6 +302,16 @@ export default function PlayerRegistration() {
             >
               <RefreshCcw size={20} /> Register Another Player
             </button>
+          </div>
+        ) : store.settings.registrationOpen === false ? (
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-12 text-center animate-in fade-in duration-300 mt-8">
+            <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-6">
+              <XCircle size={40} className="text-red-500" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-800 mb-4 tracking-tight">Registrations are Closed</h2>
+            <p className="text-slate-500 text-lg max-w-lg mx-auto">
+              We are no longer accepting player registrations at this time. If you believe this is an error, please contact the tournament administrators.
+            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in duration-300">

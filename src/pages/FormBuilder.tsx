@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
+import { useAuctionStore } from '../store/useAuctionStore';
 import { Save, Plus, Trash2, GripVertical, FileImage, Type, AlignLeft, Hash, CheckSquare, Mail, Phone, List as ListIcon, Loader2, AlertTriangle, Share2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast';
@@ -91,6 +92,7 @@ const getIconForType = (type: string) => {
 };
 
 export default function FormBuilder() {
+  const store = useAuctionStore();
   const [schema, setSchema] = useState<FormSchema>({ sportName: 'Cricket', fields: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -236,6 +238,23 @@ export default function FormBuilder() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* LEFT PANEL: SPORTS PRESETS */}
         <div className="lg:col-span-3 space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Registration Status</h2>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-700 text-sm">Accepting Players</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={store.settings.registrationOpen !== false}
+                  onChange={(e) => store.updateSettings({...store.settings, registrationOpen: e.target.checked})}
+                />
+                <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">Toggle this off to close the public registration form.</p>
+          </div>
+
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
             <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Quick Templates</h2>
             <div className="space-y-2">
