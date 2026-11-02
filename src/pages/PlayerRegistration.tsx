@@ -106,6 +106,7 @@ export default function PlayerRegistration() {
 
   useEffect(() => {
     loadSchema();
+    store.loadState();
   }, []);
 
   const loadSchema = async () => {
