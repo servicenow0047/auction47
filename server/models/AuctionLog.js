@@ -11,4 +11,4 @@ const logSchema = new mongoose.Schema({
 
 logSchema.index({ timestamp: -1 });
 
-module.exports = mongoose.model('AuctionLog', logSchema);
+module.exports = mongoose.models.AuctionLog || mongoose.model('AuctionLog', logSchema);

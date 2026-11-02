@@ -23,7 +23,6 @@ const playerSchema = new mongoose.Schema(
 );
 
 playerSchema.index({ status: 1 });
-playerSchema.index({ phone: 1 });
 playerSchema.index({ role: 1 });
 
-module.exports = mongoose.model('Player', playerSchema);
+module.exports = mongoose.models.Player || mongoose.model('Player', playerSchema);

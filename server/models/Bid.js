@@ -12,4 +12,4 @@ const bidSchema = new mongoose.Schema({
 bidSchema.index({ playerId: 1, isLatest: 1 });
 bidSchema.index({ playerId: 1, isValid: 1 });
 
-module.exports = mongoose.model('Bid', bidSchema);
+module.exports = mongoose.models.Bid || mongoose.model('Bid', bidSchema);

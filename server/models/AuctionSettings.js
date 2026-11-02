@@ -22,4 +22,4 @@ const settingsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('AuctionSettings', settingsSchema);
+module.exports = mongoose.models.AuctionSettings || mongoose.model('AuctionSettings', settingsSchema);

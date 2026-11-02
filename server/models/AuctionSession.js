@@ -14,4 +14,4 @@ const sessionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('AuctionSession', sessionSchema);
+module.exports = mongoose.models.AuctionSession || mongoose.model('AuctionSession', sessionSchema);

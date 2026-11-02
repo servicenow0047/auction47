@@ -18,4 +18,4 @@ const registrationSchemaModel = new mongoose.Schema({
   fields:    { type: [fieldSchema], default: [] },
 }, { timestamps: true });
 
-module.exports = mongoose.model('RegistrationSchema', registrationSchemaModel);
+module.exports = mongoose.models.RegistrationSchema || mongoose.model('RegistrationSchema', registrationSchemaModel);

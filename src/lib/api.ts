@@ -1,5 +1,7 @@
-// Thin axios-free fetch wrapper that talks to the Express backend
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Thin axios-free fetch wrapper that talks to the Express backend (auto-routes to /api on Vercel)
+const BASE = import.meta.env.VITE_API_URL !== undefined && import.meta.env.VITE_API_URL !== ''
+  ? import.meta.env.VITE_API_URL
+  : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? '/api' : 'http://localhost:5000/api');
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
