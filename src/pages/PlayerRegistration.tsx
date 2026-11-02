@@ -8,6 +8,54 @@ import { cn } from '../lib/utils';
 import type { PlayerStatus, Player } from '../types';
 import PlayerCard from '../components/PlayerCard';
 
+// Helper to compress images client-side before Base64 encoding
+// Reduces 5MB-10MB mobile camera photos down to ~60KB-80KB for instant uploads without crashing the server
+const compressImageFile = (file: File, maxWidth = 800, quality = 0.8): Promise<string> => {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string) || '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxWidth) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxWidth) / height);
+            height = maxWidth;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } else {
+          resolve((e.target?.result as string) || '');
+        }
+      };
+      img.onerror = () => resolve((e.target?.result as string) || '');
+      img.src = (e.target?.result as string) || '';
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function PlayerRegistration() {
   const store = useAuctionStore();
   const [schema, setSchema] = useState<any>(null);
@@ -61,17 +109,15 @@ export default function PlayerRegistration() {
     }
   };
 
-  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>, id: string) => {
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>, id: string) => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
       setFilePreviews(prev => ({ ...prev, [id]: url }));
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFileData(prev => ({ ...prev, [id]: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+      // Automatically compress image client-side to ~70 KB before converting to Base64
+      const compressedData = await compressImageFile(file, 800, 0.8);
+      setFileData(prev => ({ ...prev, [id]: compressedData }));
 
       if (errors[id]) {
         setErrors(prev => { const n = { ...prev }; delete n[id]; return n; });
