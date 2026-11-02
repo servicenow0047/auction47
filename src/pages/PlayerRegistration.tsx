@@ -1,9 +1,12 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuctionStore } from '../store/useAuctionStore';
 import { api } from '../lib/api';
-import { User, Upload, CheckCircle, AlertCircle, Users, Loader2, RefreshCcw, XCircle } from 'lucide-react';
+import {
+  User, Upload, CheckCircle, AlertCircle, Users, Loader2, RefreshCcw,
+  XCircle, Search, Clock, UserCheck, X, ShieldCheck, Eye, Trophy
+} from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { PlayerStatus, Player } from '../types';
 import PlayerCard from '../components/PlayerCard';
@@ -68,6 +71,39 @@ export default function PlayerRegistration() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [registeredPlayer, setRegisteredPlayer] = useState<Player | null>(null);
 
+  // Roster Modal States
+  const [showRosterModal, setShowRosterModal] = useState(false);
+  const [rosterTab, setRosterTab] = useState<'approved' | 'pending'>('approved');
+  const [rosterSearch, setRosterSearch] = useState('');
+  const [previewCardPlayer, setPreviewCardPlayer] = useState<Player | null>(null);
+
+  const pendingCount = store.players.filter(p => p.status === 'pending').length;
+  const approvedCount = store.players.filter(p => p.status === 'not_called' || p.status === 'sold' || p.status === 'unsold').length;
+
+  const filteredRoster = useMemo(() => {
+    return store.players.filter((p) => {
+      const matchesTab = rosterTab === 'approved' 
+        ? (p.status === 'not_called' || p.status === 'sold' || p.status === 'unsold')
+        : p.status === 'pending';
+      if (!matchesTab) return false;
+
+      if (rosterSearch.trim()) {
+        const query = rosterSearch.toLowerCase();
+        const matchesName = p.name?.toLowerCase().includes(query);
+        const matchesRole = p.role?.toLowerCase().includes(query);
+        return Boolean(matchesName || matchesRole);
+      }
+      return true;
+    });
+  }, [store.players, rosterTab, rosterSearch]);
+
+  const maskPhoneNumber = (phone?: string) => {
+    if (!phone) return '';
+    const cleaned = String(phone).trim();
+    if (cleaned.length <= 4) return '****';
+    return cleaned.slice(0, 3) + '****' + cleaned.slice(-3);
+  };
+
   useEffect(() => {
     loadSchema();
   }, []);
@@ -96,7 +132,6 @@ export default function PlayerRegistration() {
     }
   };
 
-  const registeredCount = store.players.length;
 
   const handleInputChange = (id: string, value: any) => {
     setFormData(prev => ({ ...prev, [id]: value }));
@@ -275,9 +310,45 @@ export default function PlayerRegistration() {
               </p>
             </div>
 
-            <div className="shrink-0 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-center shadow-xl">
-              <div className="text-4xl font-black text-white mb-1">{registeredCount}</div>
-              <div className="text-sm font-bold text-slate-300 uppercase tracking-wider">Registered</div>
+            <div className="shrink-0 flex flex-col sm:flex-row items-center gap-3">
+              {/* Status Badges */}
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-2.5 shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => { setRosterTab('approved'); setShowRosterModal(true); }}
+                  className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-center hover:bg-emerald-500/30 transition-all cursor-pointer"
+                  title="View Approved Players"
+                >
+                  <div className="text-2xl font-black text-emerald-300 leading-none">{approvedCount}</div>
+                  <div className="text-[10px] font-extrabold text-emerald-200 uppercase tracking-wider mt-1 flex items-center justify-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Approved
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setRosterTab('pending'); setShowRosterModal(true); }}
+                  className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-center hover:bg-amber-500/30 transition-all cursor-pointer"
+                  title="View Pending Review Players"
+                >
+                  <div className="text-2xl font-black text-amber-300 leading-none">{pendingCount}</div>
+                  <div className="text-[10px] font-extrabold text-amber-200 uppercase tracking-wider mt-1 flex items-center justify-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    Pending Review
+                  </div>
+                </button>
+              </div>
+
+              {/* View Roster Button */}
+              <button
+                type="button"
+                onClick={() => setShowRosterModal(true)}
+                className="w-full sm:w-auto px-5 py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-2xl font-black text-sm tracking-wide shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] border border-blue-400/40 cursor-pointer"
+              >
+                <Users size={18} />
+                <span>View Registered Players</span>
+              </button>
             </div>
           </div>
         </div>
@@ -496,6 +567,218 @@ export default function PlayerRegistration() {
               </button>
             </div>
           </form>
+        )}
+
+        {/* ── PUBLIC REGISTERED PLAYERS ROSTER MODAL ── */}
+        {showRosterModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden text-white animate-in zoom-in-95 duration-200">
+              
+              {/* Modal Header */}
+              <div className="p-6 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
+                    <Trophy size={22} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-white tracking-wide">
+                      {store.settings.tournamentName || 'Tournament'} Player Roster
+                    </h2>
+                    <p className="text-xs text-slate-400 font-medium">
+                      Check registration confirmation and admin review status
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowRosterModal(false)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
+                  title="Close Roster"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Controls: Tabs & Live Search */}
+              <div className="p-5 border-b border-slate-800 bg-slate-900/90 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between shrink-0">
+                {/* Tabs */}
+                <div className="flex bg-slate-800 p-1 rounded-xl gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setRosterTab('approved')}
+                    className={cn(
+                      'px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer',
+                      rosterTab === 'approved'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-slate-200'
+                    )}
+                  >
+                    <UserCheck size={14} />
+                    <span>Approved</span>
+                    <span className="px-1.5 py-0.2 bg-black/30 rounded-full text-[10px] font-mono">
+                      {approvedCount}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRosterTab('pending')}
+                    className={cn(
+                      'px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer',
+                      rosterTab === 'pending'
+                        ? 'bg-amber-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-slate-200'
+                    )}
+                  >
+                    <Clock size={14} />
+                    <span>Pending Review</span>
+                    <span className="px-1.5 py-0.2 bg-black/30 rounded-full text-[10px] font-mono">
+                      {pendingCount}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative flex-1 max-w-sm">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={rosterSearch}
+                    onChange={(e) => setRosterSearch(e.target.value)}
+                    placeholder="Search by player name or role..."
+                    className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500 font-medium"
+                  />
+                  {rosterSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setRosterSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Roster Grid */}
+              <div className="flex-1 overflow-y-auto p-6 bg-slate-950/40">
+                {filteredRoster.length === 0 ? (
+                  <div className="py-16 text-center text-slate-500 flex flex-col items-center justify-center">
+                    <ShieldCheck size={48} className="opacity-30 mb-3" />
+                    <p className="text-base font-bold text-slate-300">No players found</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {rosterSearch ? 'No player matches your search filter.' : rosterTab === 'approved' ? 'No players approved yet. Approved players will appear here.' : 'No players currently pending review.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredRoster.map((player) => {
+                      const isApproved = player.status === 'not_called' || player.status === 'sold' || player.status === 'unsold';
+                      return (
+                        <div
+                          key={player.id}
+                          className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex gap-4 items-center hover:border-slate-700 transition shadow-lg group relative overflow-hidden"
+                        >
+                          {/* Photo */}
+                          <div className="relative w-20 h-24 rounded-xl overflow-hidden bg-slate-800 shrink-0 border border-slate-700 shadow-md">
+                            {player.photo ? (
+                              <img
+                                src={player.photo}
+                                alt={player.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900 text-blue-400 font-black text-2xl">
+                                {player.name ? player.name.slice(0, 2).toUpperCase() : 'PL'}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            {/* Status Pill */}
+                            <div className="mb-1.5 flex items-center gap-1.5">
+                              {isApproved ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                  Approved for Auction
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                  Pending Admin Review
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Name */}
+                            <h3 className="font-black text-base text-white uppercase tracking-tight truncate" title={player.name}>
+                              {player.name}
+                            </h3>
+
+                            {/* Role / Meta */}
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                              {player.role && (
+                                <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30">
+                                  {player.role}
+                                </span>
+                              )}
+                              {player.phone && (
+                                <span className="text-[11px] text-slate-400 font-mono">
+                                  {maskPhoneNumber(player.phone)}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* View Card button */}
+                            <div className="mt-3">
+                              <button
+                                type="button"
+                                onClick={() => setPreviewCardPlayer(player)}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 transition cursor-pointer"
+                              >
+                                <Eye size={13} />
+                                <span>View Official Card</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer Note */}
+              <div className="p-4 border-t border-slate-800 bg-slate-950/80 text-center text-xs text-slate-500 font-medium">
+                🔒 Public View: Phone numbers are masked for privacy. Admin approval is required for auction entry.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── OFFICIAL CARD PREVIEW MODAL ── */}
+        {previewCardPlayer && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="relative max-w-4xl w-full flex flex-col items-center">
+              <button
+                type="button"
+                onClick={() => setPreviewCardPlayer(null)}
+                className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition cursor-pointer"
+                title="Close Card"
+              >
+                <X size={20} />
+              </button>
+
+              <PlayerCard
+                player={previewCardPlayer}
+                schema={schema}
+                registrationNumber={store.players.findIndex(p => p.id === previewCardPlayer.id) + 101}
+                className="shadow-2xl"
+              />
+            </div>
+          </div>
         )}
 
         {/* Promotional Footer */}
