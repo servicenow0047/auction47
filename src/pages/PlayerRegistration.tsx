@@ -1,7 +1,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { useAuctionStore } from '../store/useAuctionStore';
 import { api } from '../lib/api';
 import {
   User, Upload, CheckCircle, AlertCircle, Users, Loader2, RefreshCcw,
@@ -13,7 +12,7 @@ import PlayerCard from '../components/PlayerCard';
 
 // Helper to compress images client-side before Base64 encoding
 // Reduces 5MB-10MB mobile camera photos down to ~60KB-80KB for instant uploads without crashing the server
-const compressImageFile = (file: File, maxWidth = 800, quality = 0.8): Promise<string> => {
+const compressImageFile = (file: File, maxWidth = 400, quality = 0.6): Promise<string> => {
   return new Promise((resolve) => {
     if (!file.type.startsWith('image/')) {
       const reader = new FileReader();
@@ -51,16 +50,29 @@ const compressImageFile = (file: File, maxWidth = 800, quality = 0.8): Promise<s
           resolve((e.target?.result as string) || '');
         }
       };
+
+
       img.onerror = () => resolve((e.target?.result as string) || '');
       img.src = (e.target?.result as string) || '';
     };
+
+
     reader.onerror = () => resolve('');
     reader.readAsDataURL(file);
   });
 };
 
 export default function PlayerRegistration() {
-  const store = useAuctionStore();
+  const [settings, setSettings] = useState<any>({
+    tournamentName: '',
+    tournamentLogo: '',
+    registrationOpen: true,
+    basePrice: 1000,
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [rosterPlayers, setRosterPlayers] = useState<Player[]>([]);
+  const [rosterLoaded, setRosterLoaded] = useState(false);
+  const [rosterLoading, setRosterLoading] = useState(false);
   const [schema, setSchema] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -77,11 +89,11 @@ export default function PlayerRegistration() {
   const [rosterSearch, setRosterSearch] = useState('');
   const [previewCardPlayer, setPreviewCardPlayer] = useState<Player | null>(null);
 
-  const pendingCount = store.players.filter(p => p.status === 'pending').length;
-  const approvedCount = store.players.filter(p => p.status === 'not_called' || p.status === 'sold' || p.status === 'unsold').length;
+  const pendingCount = rosterPlayers.filter(p => p.status === 'pending').length;
+  const approvedCount = rosterPlayers.filter(p => p.status === 'not_called' || p.status === 'sold' || p.status === 'unsold').length;
 
   const filteredRoster = useMemo(() => {
-    return store.players.filter((p) => {
+    return rosterPlayers.filter((p) => {
       const matchesTab = rosterTab === 'approved' 
         ? (p.status === 'not_called' || p.status === 'sold' || p.status === 'unsold')
         : p.status === 'pending';
@@ -95,7 +107,26 @@ export default function PlayerRegistration() {
       }
       return true;
     });
-  }, [store.players, rosterTab, rosterSearch]);
+  }, [rosterPlayers, rosterTab, rosterSearch]);
+
+  const openRosterModal = async (tab?: 'approved' | 'pending') => {
+    if (tab) setRosterTab(tab);
+    setShowRosterModal(true);
+    if (!rosterLoaded) {
+      setRosterLoading(true);
+      try {
+        const players = await api.getPlayers();
+        setRosterPlayers(players || []);
+        setRosterLoaded(true);
+      } catch (err) {
+        console.error('Failed to load roster:', err);
+      } finally {
+        setRosterLoading(false);
+      }
+    }
+  };
+
+
 
   const maskPhoneNumber = (phone?: string) => {
     if (!phone) return '';
@@ -104,9 +135,22 @@ export default function PlayerRegistration() {
     return cleaned.slice(0, 3) + '****' + cleaned.slice(-3);
   };
 
+
+
+  const loadSettings = async () => {
+    try {
+      const data = await api.getSettings();
+      if (data) {
+        setSettings(data);
+      }
+    } catch (err) {
+      console.error('Failed to load tournament settings', err);
+    }
+  };
+
   useEffect(() => {
     loadSchema();
-    store.loadState();
+    loadSettings();
   }, []);
 
   const loadSchema = async () => {
@@ -134,6 +178,8 @@ export default function PlayerRegistration() {
   };
 
 
+
+
   const handleInputChange = (id: string, value: any) => {
     setFormData(prev => ({ ...prev, [id]: value }));
     if (errors[id]) {
@@ -144,6 +190,8 @@ export default function PlayerRegistration() {
       });
     }
   };
+
+
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>, id: string) => {
     const file = e.target.files?.[0];
@@ -160,6 +208,8 @@ export default function PlayerRegistration() {
       }
     }
   };
+
+
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -197,7 +247,7 @@ export default function PlayerRegistration() {
     const phoneVal = phoneField ? formData[phoneField.id] : null;
     const emailVal = emailField ? formData[emailField.id] : null;
 
-    const isDuplicate = store.players.some(p =>
+    const isDuplicate = rosterLoaded && rosterPlayers.some(p =>
       (phoneVal && p.phone === phoneVal) ||
       (emailVal && p.email && p.email === emailVal)
     );
@@ -210,16 +260,20 @@ export default function PlayerRegistration() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (validate()) {
 
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    setSubmitting(true);
+    try {
       const newPlayer: Omit<Player, 'id'> = {
         name: formData.name || formData.fullName || 'Unknown Player',
         phone: formData.phone || formData.contactNumber || 'N/A',
         photo: fileData.photo || fileData[Object.keys(fileData).find(k => k.toLowerCase().includes('photo')) || ''] || '',
         status: 'pending' as PlayerStatus,
-        basePrice: store.settings.basePrice,
+        basePrice: settings.basePrice || 1000,
         ...formData,
       };
 
@@ -228,16 +282,26 @@ export default function PlayerRegistration() {
         (newPlayer as any)[key] = fileData[key];
       });
 
-      store.addPlayer(newPlayer);
-      setRegisteredPlayer({ ...newPlayer, id: 'preview' } as Player); // Temporarily store for display
+      const created = await api.registerPlayer(newPlayer);
+      const savedPlayer = created || ({ ...newPlayer, id: 'preview' } as Player);
+      setRegisteredPlayer(savedPlayer);
+      if (rosterLoaded) {
+        setRosterPlayers(prev => [savedPlayer, ...prev]);
+      }
       setIsSuccess(true);
 
       // Auto-reset after a longer duration (e.g., 10 seconds)
       setTimeout(() => {
         resetForm();
       }, 10000);
+    } catch (err: any) {
+      setErrors({ duplicate: err.message || 'Registration failed. A player with this phone or email may already be registered.' });
+    } finally {
+      setSubmitting(false);
     }
   };
+
+
 
   const resetForm = () => {
     setIsSuccess(false);
@@ -253,6 +317,8 @@ export default function PlayerRegistration() {
     setFileData({});
     setErrors({});
   };
+
+
 
   if (loading) {
     return <div className="flex justify-center items-center h-[50vh]"><Loader2 className="animate-spin text-purple-600" size={32} /></div>;
@@ -279,9 +345,9 @@ export default function PlayerRegistration() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500 opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
           <div className="p-8 md:p-12 relative z-10 flex flex-col md:flex-row items-center gap-8">
-            {store.settings.tournamentLogo ? (
+            {settings.tournamentLogo ? (
               <img
-                src={store.settings.tournamentLogo}
+                src={settings.tournamentLogo}
                 alt="Tournament Logo"
                 className="w-32 h-32 md:w-40 md:h-40 object-contain rounded-2xl bg-white/5 p-4 shadow-xl border border-white/10"
               />
@@ -292,7 +358,7 @@ export default function PlayerRegistration() {
             )}
 
             <div className="text-center md:text-left flex-1">
-              {store.settings.registrationOpen !== false ? (
+              {settings.registrationOpen !== false ? (
                 <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-emerald-500/30">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   Registrations Open
@@ -304,7 +370,7 @@ export default function PlayerRegistration() {
                 </div>
               )}
               <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-2">
-                {store.settings.tournamentName || 'Tournament Registration'}
+                {settings.tournamentName || 'Tournament Registration'}
               </h1>
               <p className="text-slate-300 text-lg font-medium max-w-2xl">
                 Complete the form below to register for the upcoming auction. Ensure all details are accurate.
@@ -316,11 +382,11 @@ export default function PlayerRegistration() {
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-2.5 shadow-xl">
                 <button
                   type="button"
-                  onClick={() => { setRosterTab('approved'); setShowRosterModal(true); }}
+                  onClick={() => openRosterModal('approved')}
                   className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-center hover:bg-emerald-500/30 transition-all cursor-pointer"
                   title="View Approved Players"
                 >
-                  <div className="text-2xl font-black text-emerald-300 leading-none">{approvedCount}</div>
+                  <div className="text-2xl font-black text-emerald-300 leading-none">{rosterLoaded ? approvedCount : '•'}</div>
                   <div className="text-[10px] font-extrabold text-emerald-200 uppercase tracking-wider mt-1 flex items-center justify-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     Approved
@@ -329,11 +395,11 @@ export default function PlayerRegistration() {
 
                 <button
                   type="button"
-                  onClick={() => { setRosterTab('pending'); setShowRosterModal(true); }}
+                  onClick={() => openRosterModal('pending')}
                   className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-center hover:bg-amber-500/30 transition-all cursor-pointer"
                   title="View Pending Review Players"
                 >
-                  <div className="text-2xl font-black text-amber-300 leading-none">{pendingCount}</div>
+                  <div className="text-2xl font-black text-amber-300 leading-none">{rosterLoaded ? pendingCount : '•'}</div>
                   <div className="text-[10px] font-extrabold text-amber-200 uppercase tracking-wider mt-1 flex items-center justify-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                     Pending Review
@@ -344,7 +410,7 @@ export default function PlayerRegistration() {
               {/* View Roster Button */}
               <button
                 type="button"
-                onClick={() => setShowRosterModal(true)}
+                onClick={() => openRosterModal()}
                 className="w-full sm:w-auto px-5 py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-2xl font-black text-sm tracking-wide shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] border border-blue-400/40 cursor-pointer"
               >
                 <Users size={18} />
@@ -410,7 +476,7 @@ export default function PlayerRegistration() {
             <PlayerCard
               player={registeredPlayer}
               schema={schema}
-              registrationNumber={store.players.length + 100}
+              registrationNumber={registeredPlayer.phone ? registeredPlayer.phone.slice(-4) : 'REG'}
               className="mb-8"
             />
 
@@ -421,7 +487,7 @@ export default function PlayerRegistration() {
               <RefreshCcw size={20} /> Register Another Player
             </button>
           </div>
-        ) : store.settings.registrationOpen === false ? (
+        ) : settings.registrationOpen === false ? (
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-12 text-center animate-in fade-in duration-300 mt-8">
             <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-6">
               <XCircle size={40} className="text-red-500" />
@@ -562,9 +628,14 @@ export default function PlayerRegistration() {
               <p className="text-slate-400 mb-6">By continuing, you agree to the tournament registration rules.</p>
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-500 text-white font-black text-lg py-4 px-12 rounded-2xl w-full md:w-auto shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] transition-all hover:scale-105"
+                disabled={submitting}
+                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black text-lg py-4 px-12 rounded-2xl w-full md:w-auto shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] transition-all hover:scale-105 flex items-center justify-center gap-3 mx-auto"
               >
-                Submit Application
+                {submitting ? (
+                  <><Loader2 size={22} className="animate-spin" /> Submitting Application...</>
+                ) : (
+                  'Submit Application'
+                )}
               </button>
             </div>
           </form>
@@ -583,7 +654,7 @@ export default function PlayerRegistration() {
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-white tracking-wide">
-                      {store.settings.tournamentName || 'Tournament'} Player Roster
+                      {settings.tournamentName || 'Tournament'} Player Roster
                     </h2>
                     <p className="text-xs text-slate-400 font-medium">
                       Check registration confirmation and admin review status
@@ -618,7 +689,7 @@ export default function PlayerRegistration() {
                     <UserCheck size={14} />
                     <span>Approved</span>
                     <span className="px-1.5 py-0.2 bg-black/30 rounded-full text-[10px] font-mono">
-                      {approvedCount}
+                      {rosterLoading ? '...' : approvedCount}
                     </span>
                   </button>
 
@@ -635,7 +706,7 @@ export default function PlayerRegistration() {
                     <Clock size={14} />
                     <span>Pending Review</span>
                     <span className="px-1.5 py-0.2 bg-black/30 rounded-full text-[10px] font-mono">
-                      {pendingCount}
+                      {rosterLoading ? '...' : pendingCount}
                     </span>
                   </button>
                 </div>
@@ -664,7 +735,12 @@ export default function PlayerRegistration() {
 
               {/* Roster Grid */}
               <div className="flex-1 overflow-y-auto p-6 bg-slate-950/40">
-                {filteredRoster.length === 0 ? (
+                {rosterLoading ? (
+                  <div className="py-20 text-center text-slate-400 flex flex-col items-center justify-center">
+                    <Loader2 size={36} className="animate-spin text-blue-500 mb-3" />
+                    <p className="text-sm font-semibold">Loading player roster...</p>
+                  </div>
+                ) : filteredRoster.length === 0 ? (
                   <div className="py-16 text-center text-slate-500 flex flex-col items-center justify-center">
                     <ShieldCheck size={48} className="opacity-30 mb-3" />
                     <p className="text-base font-bold text-slate-300">No players found</p>
@@ -687,6 +763,7 @@ export default function PlayerRegistration() {
                               <img
                                 src={player.photo}
                                 alt={player.name}
+                                loading="lazy"
                                 className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                               />
                             ) : (
@@ -775,7 +852,7 @@ export default function PlayerRegistration() {
               <PlayerCard
                 player={previewCardPlayer}
                 schema={schema}
-                registrationNumber={store.players.findIndex(p => p.id === previewCardPlayer.id) + 101}
+                registrationNumber={rosterPlayers.findIndex(p => p.id === previewCardPlayer.id) + 101}
                 className="shadow-2xl"
               />
             </div>
