@@ -1,11 +1,15 @@
-import { useState } from 'react';
-import { X, IndianRupee, Users, Trophy, Download, Loader2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { X, IndianRupee, Users, Trophy, Loader2, Image as ImageIcon, Sparkles, FileText } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import type { Team, Player } from '../types';
 import { formatCurrency } from '../lib/utils';
 import { SquadPDFDocument } from './TeamPDFView';
 import { useToast } from './Toast';
 import { useAuctionStore } from '../store/useAuctionStore';
+import { TeamPosterCanvas } from './TeamPosterCanvas';
+import { getDefaultPosterConfig } from '../types/poster';
+import { exportElementToImage } from '../utils/posterExporter';
 
 interface TeamDetailDrawerProps {
   team: Team | null;
@@ -16,8 +20,11 @@ interface TeamDetailDrawerProps {
 
 export default function TeamDetailDrawer({ team, players, initialBudget, onClose }: TeamDetailDrawerProps) {
   const store = useAuctionStore();
+  const navigate = useNavigate();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const { toast } = useToast();
+  const posterOffscreenRef = useRef<HTMLDivElement>(null);
 
   if (!team) return null;
 
@@ -29,12 +36,59 @@ export default function TeamDetailDrawer({ team, players, initialBudget, onClose
   const totalSpent = team.totalSpent ?? soldPlayers.reduce((sum, p) => sum + (p.soldPrice ?? 0), 0);
   const budgetUsedPct = initialBudget > 0 ? Math.min((totalSpent / initialBudget) * 100, 100) : 0;
 
+  // Generate poster config combining defaults and any saved design preset
+  const posterConfig = (() => {
+    const base = getDefaultPosterConfig(
+      team,
+      players,
+      store.settings.tournamentName,
+      store.settings.tournamentLogo
+    );
+    const saved = localStorage.getItem('auction47_poster_style_preset');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          ...base,
+          ...parsed,
+          teamName: team.name,
+          teamLogoUrl: team.logo || '',
+          playersList: soldPlayers,
+        };
+      } catch (e) {
+        console.warn('Failed parsing saved poster preset', e);
+      }
+    }
+    return base;
+  })();
+
+  const handleDownloadImage = async () => {
+    if (!posterOffscreenRef.current) return;
+    try {
+      setIsGeneratingImage(true);
+      const safeTeamName = team.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+      await exportElementToImage(posterOffscreenRef.current, {
+        fileName: `${safeTeamName}_Squad_Poster.png`,
+        format: 'png',
+        scale: 2,
+        width: 1080,
+        height: 1920,
+      });
+      toast('success', 'Image Downloaded', `${team.name} squad poster saved as high-res image.`);
+    } catch (error) {
+      console.error('Error generating image poster:', error);
+      const msg = error instanceof Error ? error.message : 'Could not generate poster image.';
+      toast('error', 'Image Failed', msg);
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
   const handleDownloadPdf = async () => {
     try {
       setIsGeneratingPdf(true);
 
       // Pre-process all images to safe base64 JPEGs using browser Image/Canvas
-      // This bypasses @react-pdf's strict image codec requirements and fixes blob: URLs
       const safePlayers = await Promise.all(
         soldPlayers.map(async (player) => {
           if (!player.photo) return player;
@@ -91,6 +145,11 @@ export default function TeamDetailDrawer({ team, players, initialBudget, onClose
 
   return (
     <>
+      {/* Hidden offscreen node for 1-click image generation */}
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -100 }}>
+        <TeamPosterCanvas ref={posterOffscreenRef} config={posterConfig} id="drawer-poster-offscreen" />
+      </div>
+
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
@@ -119,31 +178,64 @@ export default function TeamDetailDrawer({ team, players, initialBudget, onClose
                 <p className="text-slate-400 text-sm">{soldPlayers.length} players bought</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDownloadPdf}
-                disabled={isGeneratingPdf || soldPlayers.length === 0}
-                className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition-colors shadow-lg"
-              >
-                {isGeneratingPdf ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Download size={16} />
-                    Download PDF
-                  </>
-                )}
-              </button>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
+            
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Action Download Buttons */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {/* Download as Image Button */}
+            <button
+              onClick={handleDownloadImage}
+              disabled={isGeneratingImage || soldPlayers.length === 0}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black text-xs font-black rounded-lg transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Download squad poster as high-resolution image"
+            >
+              {isGeneratingImage ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  Generating Image...
+                </>
+              ) : (
+                <>
+                  <ImageIcon size={15} />
+                  Download Image
+                </>
+              )}
+            </button>
+
+            {/* Poster Studio Customize Button */}
+            <button
+              onClick={() => {
+                onClose();
+                navigate(`/posters?teamId=${team.id}`);
+              }}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 text-xs font-bold rounded-lg transition"
+              title="Open Poster Studio to customize background, fonts, and watermarks"
+            >
+              <Sparkles size={14} className="text-amber-400" />
+              Edit in Studio
+            </button>
+
+            {/* Download PDF Button */}
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf || soldPlayers.length === 0}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium rounded-lg transition"
+              title="Download squad roster as PDF document"
+            >
+              {isGeneratingPdf ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <FileText size={14} />
+              )}
+              PDF
+            </button>
           </div>
 
           {/* Budget bar */}

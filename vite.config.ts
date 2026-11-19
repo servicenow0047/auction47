@@ -8,6 +8,7 @@ export default defineConfig({
   optimizeDeps: {
     // Force Vite to pre-bundle @react-pdf/renderer for browser use
     include: ['@react-pdf/renderer'],
+    exclude: ['html2canvas'],
   },
   build: {
     commonjsOptions: {

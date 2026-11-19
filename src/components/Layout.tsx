@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, UsersRound, Settings, MonitorPlay, PlayCircle, XCircle, ScrollText, UserPlus, SlidersHorizontal, Menu, Clapperboard } from 'lucide-react';
+import { Home, Users, UsersRound, Settings, MonitorPlay, PlayCircle, XCircle, ScrollText, UserPlus, SlidersHorizontal, Menu, Clapperboard, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuctionStore } from '../store/useAuctionStore';
 import NetworkStatus from './NetworkStatus';
@@ -15,6 +15,7 @@ export default function Layout() {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: Home },
     { name: 'Teams', path: '/teams', icon: UsersRound },
+    { name: 'Poster Studio', path: '/posters', icon: Sparkles },
     { name: 'Players', path: '/players', icon: Users },
     { name: 'Register Player', path: '/register', icon: UserPlus },
     { name: 'Live Auction', path: '/auction', icon: PlayCircle },
