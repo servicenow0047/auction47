@@ -873,6 +873,9 @@ export default function PlayerRegistration() {
           <a href="mailto:auction047@gmail.com" className="text-indigo-600 font-mono mt-3 hover:text-purple-600 hover:underline transition-colors font-bold flex items-center gap-2">
             Support: auction047@gmail.com
           </a>
+          <a href="#/login" className="text-slate-400 hover:text-slate-200 text-xs font-semibold mt-4 transition border border-slate-700/50 bg-slate-900/60 px-3 py-1.5 rounded-lg">
+            Organizer / Admin Portal →
+          </a>
         </div>
       </div>
     </div>

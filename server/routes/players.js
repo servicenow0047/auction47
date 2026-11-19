@@ -4,15 +4,28 @@ const Player = require('../models/Player');
 const AuctionLog = require('../models/AuctionLog');
 const { requireAdmin } = require('../middleware/authMiddleware');
 
-// GET all players (with optional filters)
+// GET all players (with optional filters, excluding heavy photo by default for bandwidth protection)
 router.get('/', async (req, res, next) => {
   try {
-    const { status, role } = req.query;
+    const { status, role, includePhoto } = req.query;
     const filter = {};
     if (status) filter.status = status;
     if (role && role !== 'All') filter.role = role;
-    const players = await Player.find(filter).sort({ createdAt: -1 });
+    let query = Player.find(filter).sort({ createdAt: -1 });
+    if (includePhoto !== 'true') {
+      query = query.select('-photo');
+    }
+    const players = await query;
     res.json(players);
+  } catch (err) { next(err); }
+});
+
+// GET single player photo on demand
+router.get('/:id/photo', async (req, res, next) => {
+  try {
+    const player = await Player.findById(req.params.id).select('photo');
+    if (!player || !player.photo) return res.status(404).json({ error: 'Photo not found' });
+    res.json({ photo: player.photo });
   } catch (err) { next(err); }
 });
 
