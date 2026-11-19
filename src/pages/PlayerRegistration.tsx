@@ -70,6 +70,7 @@ export default function PlayerRegistration() {
     basePrice: 1000,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [counts, setCounts] = useState<{ approved: number; pending: number }>({ approved: 0, pending: 0 });
   const [rosterPlayers, setRosterPlayers] = useState<Player[]>([]);
   const [rosterLoaded, setRosterLoaded] = useState(false);
   const [rosterLoading, setRosterLoading] = useState(false);
@@ -89,8 +90,8 @@ export default function PlayerRegistration() {
   const [rosterSearch, setRosterSearch] = useState('');
   const [previewCardPlayer, setPreviewCardPlayer] = useState<Player | null>(null);
 
-  const pendingCount = rosterPlayers.filter(p => p.status === 'pending').length;
-  const approvedCount = rosterPlayers.filter(p => p.status === 'not_called' || p.status === 'sold' || p.status === 'unsold').length;
+  const pendingCount = rosterLoaded ? rosterPlayers.filter(p => p.status === 'pending').length : counts.pending;
+  const approvedCount = rosterLoaded ? rosterPlayers.filter(p => p.status === 'not_called' || p.status === 'sold' || p.status === 'unsold').length : counts.approved;
 
   const filteredRoster = useMemo(() => {
     return rosterPlayers.filter((p) => {
@@ -139,12 +140,18 @@ export default function PlayerRegistration() {
 
   const loadSettings = async () => {
     try {
-      const data = await api.getSettings();
-      if (data) {
-        setSettings(data);
+      const [settingsData, countsData] = await Promise.all([
+        api.getSettings().catch(() => null),
+        api.getPlayerCounts().catch(() => null)
+      ]);
+      if (settingsData) {
+        setSettings(settingsData);
+      }
+      if (countsData) {
+        setCounts({ approved: countsData.approved, pending: countsData.pending });
       }
     } catch (err) {
-      console.error('Failed to load tournament settings', err);
+      console.error('Failed to load tournament settings or counts', err);
     }
   };
 
@@ -285,6 +292,7 @@ export default function PlayerRegistration() {
       const created = await api.registerPlayer(newPlayer);
       const savedPlayer = created || ({ ...newPlayer, id: 'preview' } as Player);
       setRegisteredPlayer(savedPlayer);
+      setCounts(prev => ({ ...prev, pending: prev.pending + 1 }));
       if (rosterLoaded) {
         setRosterPlayers(prev => [savedPlayer, ...prev]);
       }
@@ -386,7 +394,7 @@ export default function PlayerRegistration() {
                   className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-center hover:bg-emerald-500/30 transition-all cursor-pointer"
                   title="View Approved Players"
                 >
-                  <div className="text-2xl font-black text-emerald-300 leading-none">{rosterLoaded ? approvedCount : '•'}</div>
+                  <div className="text-2xl font-black text-emerald-300 leading-none">{approvedCount}</div>
                   <div className="text-[10px] font-extrabold text-emerald-200 uppercase tracking-wider mt-1 flex items-center justify-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     Approved
@@ -399,7 +407,7 @@ export default function PlayerRegistration() {
                   className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-center hover:bg-amber-500/30 transition-all cursor-pointer"
                   title="View Pending Review Players"
                 >
-                  <div className="text-2xl font-black text-amber-300 leading-none">{rosterLoaded ? pendingCount : '•'}</div>
+                  <div className="text-2xl font-black text-amber-300 leading-none">{pendingCount}</div>
                   <div className="text-[10px] font-extrabold text-amber-200 uppercase tracking-wider mt-1 flex items-center justify-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                     Pending Review

@@ -4,18 +4,23 @@ const Player = require('../models/Player');
 const AuctionLog = require('../models/AuctionLog');
 const { requireAdmin } = require('../middleware/authMiddleware');
 
-// GET all players (with optional filters, excluding heavy photo by default for bandwidth protection)
+// GET player counts (super lightweight, returns approved & pending numbers)
+router.get('/counts', async (req, res, next) => {
+  try {
+    const approved = await Player.countDocuments({ status: { $in: ['not_called', 'sold', 'unsold'] } });
+    const pending = await Player.countDocuments({ status: 'pending' });
+    res.json({ approved, pending, total: approved + pending });
+  } catch (err) { next(err); }
+});
+
+// GET all players (with optional filters)
 router.get('/', async (req, res, next) => {
   try {
-    const { status, role, includePhoto } = req.query;
+    const { status, role } = req.query;
     const filter = {};
     if (status) filter.status = status;
     if (role && role !== 'All') filter.role = role;
-    let query = Player.find(filter).sort({ createdAt: -1 });
-    if (includePhoto !== 'true') {
-      query = query.select('-photo');
-    }
-    const players = await query;
+    const players = await Player.find(filter).sort({ createdAt: -1 });
     res.json(players);
   } catch (err) { next(err); }
 });

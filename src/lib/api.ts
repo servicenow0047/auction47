@@ -38,6 +38,7 @@ export const api = {
   endAuction: ()                      => req<any>('POST', '/auction/end'),
 
   // Players
+  getPlayerCounts: () => req<{ approved: number; pending: number; total: number }>('GET', '/players/counts'),
   getPlayers: (params?: { status?: string; role?: string }) => {
     const qs = params ? '?' + new URLSearchParams(params as Record<string,string>).toString() : '';
     return req<any[]>('GET', `/players${qs}`);
