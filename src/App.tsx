@@ -33,12 +33,9 @@ export default function App() {
   const loadState = useAuctionStore(s => s.loadState);
 
   useEffect(() => {
-    // Only load heavy auction state if running locally and admin is logged in
+    // When running locally on PC, always load the full auction state immediately
     if (isLocal) {
-      const password = localStorage.getItem('admin_password');
-      if (password) {
-        loadState();
-      }
+      loadState();
     }
   }, [isLocal, loadState]);
 

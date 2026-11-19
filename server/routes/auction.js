@@ -27,12 +27,7 @@ router.get('/state', async (req, res, next) => {
   try {
     const session = await getSession();
     const settings = await AuctionSettings.findOne() || {};
-    const players = await Player.find().select('-photo').lean();
-    if (session.currentPlayerId) {
-      const active = await Player.findById(session.currentPlayerId).select('photo').lean();
-      const idx = players.findIndex(p => p._id.toString() === session.currentPlayerId.toString());
-      if (idx !== -1 && active) players[idx].photo = active.photo;
-    }
+    const players = await Player.find();
     const teams = await Team.find().populate('players', '_id name role soldPrice photo age basePrice');
     const logs = await AuctionLog.find().sort({ timestamp: -1 }).limit(100)
       .populate('playerId', 'name').populate('teamId', 'name');
@@ -61,7 +56,7 @@ router.get('/state', async (req, res, next) => {
 
     // Map players to frontend shape
     const formattedPlayers = players.map(p => {
-      const doc = p.toObject();
+      const doc = typeof p.toObject === 'function' ? p.toObject() : p;
       const { _id, __v, createdAt, updatedAt, assignedTeamId, ...rest } = doc;
       return {
         ...rest,
